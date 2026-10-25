@@ -1,6 +1,6 @@
 # Export-Import Plugin — How to Use
 
-[Tiếng Việt](%5BVN%5D%20HOW%20TO%20USE%20THIS%20PLUGINS.md) · English
+[Tiếng Việt](https://github.com/minhReal/SieuSV-Storage/blob/main/Export-Import-Plugin/[VN]%20HOW%20TO%20USE%20THIS%20PLUGIN.md) · English
 
 This plugin lets you **export / import plugins as code strings**, so you can share and install plugins right on your phone **without building a model on a computer** (quite annoying).
 

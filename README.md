@@ -1,11 +1,10 @@
 <div align="center">
-  
+
 <img src="logo2.jpg" alt="SIEUSV Plugins" width="200">
-  
+
 # SieuSV-Storage
 
 **Storage to hold plugin scripts for [SIEUSV plugins](https://create.roblox.com/store/asset/124980373269733/SIEUSV-plugins-BETA)**
-
 
 [![Roblox](https://img.shields.io/badge/Roblox-Luau-00A2FF?logo=roblox&logoColor=white)](https://create.roblox.com/store/asset/124980373269733/SIEUSV-plugins-BETA)
 [![License](https://img.shields.io/badge/License-SAL--1.0-blue)](LICENSE.md)
@@ -27,14 +26,14 @@ Browse, read, copy or fork the scripts here. The ready-to-use model is on the [R
 
 ## Plugins
 
-| Plugin | File | Description |
+| Plugin | Description | File |
 | --- | --- | --- |
-| **Weld** | [`Weld.lua`](Weld.lua) | Tap parts to select them (highlighted & numbered), then disable to create local **Weld / WeldConstraint / Snap / Attachment / SpringConstraint / HingeConstraint** while keeping positions. *(Known bugs — WIP.)* |
-| **Surface Preview** | [`Surface Preview.lua`](<Surface Preview.lua>) | Shows the **X / Y / Z** axes and surfaces of any part you select. |
-| **Grip Editor** | [`Grip-Editor/`](Grip-Editor) | Edit a Tool's `Grip` with **Move / Rotate** handles and snap settings. Playtest only. |
-| **Export-Import Plugin** | [`Export-Import-Plugin/`](Export-Import-Plugin) | Export/import plugins as code strings — no computer needed. Includes a how-to guide (EN/VN). |
-| **Open Chat** | [`Open Chat.lua`](<Open Chat.lua>) | Toggle the Roblox chat from anywhere. |
-| **Other** | [`Other/AutomaticButtonArrangement.lua`](Other/AutomaticButtonArrangement.lua) | Scripts that support the main plugin |
+| **Weld** | Tap parts to select them (highlighted & numbered), then disable to create local **Weld / WeldConstraint / Snap / Attachment / SpringConstraint / HingeConstraint** while keeping positions. *(Known bugs — WIP.)* | [`Weld.lua`](Weld.lua) |
+| **Surface Preview** | Shows the **X / Y / Z** axes and surfaces of any part you select. | [`Surface Preview.lua`](<Surface Preview.lua>) |
+| **Grip Editor** | Edit a Tool's `Grip` with **Move / Rotate** handles and snap settings. Playtest only. | [`Grip-Editor/`](Grip-Editor) |
+| **Export-Import Plugin** | Export/import plugins as code strings — no computer needed. Includes a how-to guide (EN/VN). | [`Export-Import-Plugin/`](Export-Import-Plugin) |
+| **Open Chat** | Toggle the Roblox chat from anywhere. | [`Open Chat.lua`](<Open Chat.lua>) |
+| **Other** | Scripts that support the main plugin | [`Other/AutomaticButtonArrangement.lua`](Other/AutomaticButtonArrangement.lua) |
 
 ## How to use
 
@@ -65,7 +64,8 @@ SieuSV-Storage/
 ├── Other/
 │   └── AutomaticButtonArrangement.lua
 ├── LICENSE.md
-└── README.md
+├── README.md
+└── logo.jpg
 ```
 
 ## Contributing

@@ -1,0 +1,18 @@
+-- 
+--  #0.5. [FIRST]:
+--      bạn cần biết về "Part" và "Script Sources"trong plugin này:
+--         1. Part để làm gì?
+--            Khi bạn xuất 1 plugin hoặc nhiều plugin thì các textbox của Part sẽ chứa mã bên trong và các Part,
+--            bạn cũng có thể Xoá hoặc add thêm bằng "Delete a Part" và "Add a Part"
+--         
+--         2. Script Sources để làm gì?
+--            Vì Giới hạn của tôi nên tôi không thể copy 1 script bên trong Script/LocalScript/ModuleScript vì nhiều lỗi
+-- 
+--  #1. [EXPORT]:
+--       DESC: Chức năng của nút này là để xuất tất cả mỗi thứ ở trong "StarterCharacterScript"
+--                   bạn cũng có thể sử dụng có thể dùng nút "Target Object" để xuất 1 object củ thể, ví dụ như "StarterCharacterScripts.MyPlugin"
+--      
+--  #2. [IMPORT]:
+--       DESC: Chức năng của nút này là import 1 plugin vào game của bạn mà không cần tạo model bằng máy tính (quite annoying)
+--                  khi bạn muốn import 1 plugin thì cần chuỗi mã và nhập vào các textbox cho từng Part (nó có thể nhiều Part), sau đó import và đợi
+

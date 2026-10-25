@@ -3,7 +3,6 @@
 **SIEUSV plugins** — [Roblox Creator Store](https://create.roblox.com/store/asset/124980373269733/SIEUSV-plugins-BETA)
 
 Created by:
-
 - [minh152680 / minhminhminh6736](https://www.youtube.com/@minh15268O)
 - [Ba K gang](https://www.roblox.com/communities/434674101/Ba-K-gang#!/about)
 

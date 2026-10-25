@@ -1,8 +1,11 @@
 <div align="center">
-
+  
+<img src="logo2.jpg" alt="SIEUSV Plugins" width="200">
+  
 # SieuSV-Storage
 
 **Storage to hold plugin scripts for [SIEUSV plugins](https://create.roblox.com/store/asset/124980373269733/SIEUSV-plugins-BETA)**
+
 
 [![Roblox](https://img.shields.io/badge/Roblox-Luau-00A2FF?logo=roblox&logoColor=white)](https://create.roblox.com/store/asset/124980373269733/SIEUSV-plugins-BETA)
 [![License](https://img.shields.io/badge/License-SAL--1.0-blue)](LICENSE.md)

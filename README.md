@@ -4,8 +4,6 @@
 
 **Storage to hold plugin scripts for [SIEUSV plugins](https://create.roblox.com/store/asset/124980373269733/SIEUSV-plugins-BETA)**
 
-Plugins make building your game in Studio Lite easier!
-
 [![Roblox](https://img.shields.io/badge/Roblox-Luau-00A2FF?logo=roblox&logoColor=white)](https://create.roblox.com/store/asset/124980373269733/SIEUSV-plugins-BETA)
 [![License](https://img.shields.io/badge/License-SAL--1.0-blue)](LICENSE.md)
 [![Version](https://img.shields.io/badge/version-26.1-brightgreen)](#plugins)
@@ -19,7 +17,8 @@ English · [Tiếng Việt](#tiếng-việt)
 
 ## About
 
-**SieuSV-Storage** is the source repository for the scripts behind **SIEUSV plugins** — a collection of small, in-game "plugins" (GUI buttons + LocalScripts) that bring Studio-like tools into a running game. Each plugin lives in the `Plugins` folder of the model and is toggled with its own button.
+**SieuSV-Storage** is the source repository for the scripts behind **SIEUSV plugins** - Plugins make building your game in Studio Lite easier!
+
 
 Browse, read, copy or fork the scripts here. The ready-to-use model is on the [Roblox Creator Store](https://create.roblox.com/store/asset/124980373269733/SIEUSV-plugins-BETA).
 
@@ -27,20 +26,21 @@ Browse, read, copy or fork the scripts here. The ready-to-use model is on the [R
 
 | Plugin | File | Description |
 | --- | --- | --- |
-| **Advanced Explorer** | [`Advanced Explorer.lua`](<Advanced Explorer.lua>) | Use **Explorer** and **Properties** windows while playtesting — with search/filter and delete. |
 | **Weld** | [`Weld.lua`](Weld.lua) | Tap parts to select them (highlighted & numbered), then disable to create local **Weld / WeldConstraint / Snap / Attachment / SpringConstraint / HingeConstraint** while keeping positions. *(Known bugs — WIP.)* |
 | **Surface Preview** | [`Surface Preview.lua`](<Surface Preview.lua>) | Shows the **X / Y / Z** axes and surfaces of any part you select. |
 | **Grip Editor** | [`Grip-Editor/`](Grip-Editor) | Edit a Tool's `Grip` with **Move / Rotate** handles and snap settings. Playtest only. |
 | **Export-Import Plugin** | [`Export-Import-Plugin/`](Export-Import-Plugin) | Export/import plugins as code strings — no computer needed. Includes a how-to guide (EN/VN). |
 | **Open Chat** | [`Open Chat.lua`](<Open Chat.lua>) | Toggle the Roblox chat from anywhere. |
-| **Other** | [`Other/AutomaticButtonArrangement.lua`](Other/AutomaticButtonArrangement.lua) | Helper that auto-arranges plugin buttons in a 2-column scrolling grid. |
+| **Other** | [`Other/AutomaticButtonArrangement.lua`](Other/AutomaticButtonArrangement.lua) | Scripts that support the main plugin |
 
 ## How to use
 
-1. Get the model from the [Creator Store](https://create.roblox.com/store/asset/124980373269733/SIEUSV-plugins-BETA), **or** copy a script from this repo.
-2. Put the plugin GUI/button into your game (StarterGui / StarterCharacterScripts, depending on the plugin).
-3. Paste the script into a `LocalScript` placed inside the plugin button/frame (the scripts use `script.Parent`).
-4. Playtest and tap the button to toggle the plugin.  Green button = **ON**,  white = **OFF**.
+1. Copy assetid from the [Creator Store](https://create.roblox.com/store/asset/124980373269733/SIEUSV-plugins-BETA).
+2. Join Studio Lite.
+3. Paste it into the Toolbox and then click Get.
+4. Select Plugins. (find it in the Workspace)
+6. Go to StarterPlayer>StarterCharaterScripts.
+7. Just paste plugins and you're done!
 
 > Making your own plugin button? I'll create some template scripts soon. lel.
 
@@ -88,7 +88,7 @@ You may use, modify and commercialize derivatives, but you **must credit the ori
 
 ### Giới thiệu
 
-**SieuSV-Storage** là kho lưu trữ các script của **SIEUSV plugins** — bộ "plugin" nhỏ chạy ngay trong game (nút GUI + LocalScript), mang các công cụ giống Roblox Studio vào lúc **playtest**, dùng được cả trên **điện thoại**.
+**SieuSV-Storage** là kho lưu trữ các script của **SIEUSV plugins** - Bộ tool giúp làm game trở nên dễ hơn!
 
 Model hoàn chỉnh có trên [Roblox Creator Store](https://create.roblox.com/store/asset/124980373269733/SIEUSV-plugins-BETA).
 
@@ -96,20 +96,20 @@ Model hoàn chỉnh có trên [Roblox Creator Store](https://create.roblox.com/s
 
 | Plugin | Chức năng |
 | --- | --- |
-| **Advanced Explorer** | Dùng Explorer và Properties khi đang playtest (có tìm kiếm, xoá). |
 | **Weld** | Chọn các part rồi tắt plugin để tạo weld/constraint cục bộ, giữ nguyên vị trí. *(Còn lỗi.)* |
 | **Surface Preview** | Xem các mặt/trục X, Y, Z của part. |
 | **Grip Editor** | Chỉnh `Grip` của Tool bằng Move/Rotate. Chỉ dùng khi playtest. |
-| **Export-Import Plugin** | Xuất/nhập plugin bằng chuỗi code, không cần máy tính. |
+| **Export-Import Plugin** | Xuất/nhập plugin bằng chuỗi code, không cần PC. |
 | **Open Chat** | Mở chat ở mọi nơi. |
-| **Other** | Script phụ trợ sắp xếp nút tự động. |
+| **Other** | Script phụ trợ. |
 
 ### Cách dùng
 
-1. Lấy model từ Creator Store hoặc copy script từ repo này.
-2. Đặt GUI/nút plugin vào game của bạn.
-3. Dán script vào `LocalScript` nằm trong nút/frame của plugin.
-4. Playtest và bấm nút để bật/tắt (xanh lá = bật, trắng = tắt).
+1. Lấy assetid của model từ [Creator Store](https://create.roblox.com/store/asset/124980373269733/SIEUSV-plugins-BETA).
+2. Dán vào ToolBox rồi bấm Get
+3. Tìm và chọn **Plugins** (trong Workspace)
+4. Tìm StarterPlayer>StarterCharaterScripts
+5. Dán **Plugins** vào, xong!
 
 ### Giấy phép
 

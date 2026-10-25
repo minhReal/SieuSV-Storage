@@ -1,6 +1,6 @@
 # Export-Import Plugin — Hướng dẫn sử dụng
 
-Tiếng Việt · [English](%5BEN%5D%20HOW%20TO%20USE%20THIS%20PLUGINS.md)
+Tiếng Việt · [English](https://github.com/minhReal/SieuSV-Storage/blob/main/Export-Import-Plugin/[EN]%20HOW%20TO%20USE%20THIS%20PLUGIN.md)
 
 Plugin này cho phép **xuất / nhập plugin bằng chuỗi code**, giúp bạn chia sẻ và cài plugin ngay trên điện thoại mà **không cần tạo model bằng máy tính** (khá phiền).
 

@@ -1,6 +1,6 @@
 # SIEUSV Attribution License 1.0 (SAL-1.0)
 
-**SIEUSV plugins** — [Roblox Creator Store](https://create.roblox.com/store/asset/124980373269733/SIEUSV-plugins-BETA)
+**SIEUSV plugins** - [Roblox Creator Store](https://create.roblox.com/store/asset/124980373269733/SIEUSV-plugins-BETA)
 
 Created by:
 - [minh152680 / minhminhminh6736](https://www.youtube.com/@minh15268O)

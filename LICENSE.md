@@ -23,7 +23,7 @@ You **may**:
 
 You **must**:
 
-- Credit **minh152680** and **Ba K gang**.
+- Credit **minh152680** and **Ba K gang** (if you post your plugin and this library).
 - Include a link to the original model/library.
 - Clearly state that your model/plugin is based on or modified from this model/library.
 - When using this model/library or a derivative to create public content (including YouTube videos), provide visible attribution to the original authors.

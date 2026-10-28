@@ -50,7 +50,6 @@ Browse, read, copy or fork the scripts here. The ready-to-use model is on the [R
 
 ```text
 SieuSV-Storage/
-├── Advanced Explorer.lua
 ├── Open Chat.lua
 ├── Surface Preview.lua
 ├── Weld.lua
@@ -62,10 +61,8 @@ SieuSV-Storage/
 │   ├── EN_HOW_TO_USE_THIS_PLUGINS.md
 │   └── VN_HOW_TO_USE_THIS_PLUGINS.md
 ├── Other/
-│   └── AutomaticButtonArrangement.lua
 ├── LICENSE.md
-├── README.md
-└── logo.jpg
+└── README.md
 ```
 
 ## Contributing

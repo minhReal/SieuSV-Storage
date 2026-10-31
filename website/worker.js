@@ -3,8 +3,8 @@ const SITE="https://sieu-sv-library-api.sieusv-storage-minhreal.workers.dev";
 const COOKIE="ssv_session";
 const STATE_COOKIE="ssv_oauth_state";
 const json=(data,status=200,headers={})=>new Response(JSON.stringify(data),{status,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store",...headers}});
-const b64u=b=>btoa(String.fromCharCode(...new Uint8Array(b))).replace(/=/g,"").replace(/\\+/g,"-").replace(/\\//g,"_");
-const unb64u=s=>Uint8Array.from(atob(s.replace(/-/g,"+").replace(/_/g,"/")+"===".slice((s.length+3)%4)),c=>c.charCodeAt(0));
+const b64u=b=>btoa(String.fromCharCode(...new Uint8Array(b))).replace(/=/g,"").replaceAll("+","-").replaceAll("/","_");
+const unb64u=s=>Uint8Array.from(atob(s.replace(/-/g,"+").replace(/_/g,"/")+"=".repeat((4-s.length%4)%4)),c=>c.charCodeAt(0));
 const cookie=(name,value,maxAge)=>name+"="+value+"; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age="+maxAge;
 function getCookie(req,name){return (req.headers.get("Cookie")||"").split(";").map(x=>x.trim()).find(x=>x.startsWith(name+"="))?.slice(name.length+1)||""}
 async function sign(value,secret){const key=await crypto.subtle.importKey("raw",new TextEncoder().encode(secret),{name:"HMAC",hash:"SHA-256"},false,["sign"]);return b64u(await crypto.subtle.sign("HMAC",key,new TextEncoder().encode(value)))}
@@ -21,7 +21,7 @@ export default {async fetch(request,env){
   const redirect=origin+"/auth/google/callback";
   const google=new URL("https://accounts.google.com/o/oauth2/v2/auth");
   google.search=new URLSearchParams({client_id:env.GOOGLE_CLIENT_ID,redirect_uri:redirect,response_type:"code",scope:"openid email profile",state,access_type:"online",prompt:"select_account"}).toString();
-  return Response.redirect(google.toString(),302).headers?new Response(null,{status:302,headers:{Location:google.toString(),"Set-Cookie":cookie(STATE_COOKIE,state,600),"Cache-Control":"no-store"}}):Response.redirect(google.toString(),302);
+  return new Response(null,{status:302,headers:{Location:google.toString(),"Set-Cookie":cookie(STATE_COOKIE,state,600),"Cache-Control":"no-store"}});
  }
  if(url.pathname==="/auth/google/callback"&&request.method==="GET"){
   const state=url.searchParams.get("state")||"",saved=getCookie(request,STATE_COOKIE),code=url.searchParams.get("code");
@@ -38,7 +38,7 @@ export default {async fetch(request,env){
   const id=old?.id||profile.sub;
   await env.DB.prepare("INSERT INTO users (id,google_sub,username,display_name,avatar_url) VALUES (?,?,?,?,?) ON CONFLICT(google_sub) DO UPDATE SET display_name=excluded.display_name,avatar_url=excluded.avatar_url").bind(id,profile.sub,username,profile.name||username,profile.picture||"").run();
   const session=await makeSession(profile.sub,env.gg_secret);
-  return new Response(null,{status:302,headers:{Location:origin+"/?login=success", "Set-Cookie":[cookie(COOKIE,session,604800),cookie(STATE_COOKIE,"",0)].join(", "),"Cache-Control":"no-store"}});
+  const headers=new Headers({Location:origin+"/?login=success","Cache-Control":"no-store"});headers.append("Set-Cookie",cookie(COOKIE,session,604800));headers.append("Set-Cookie",cookie(STATE_COOKIE,"",0));return new Response(null,{status:302,headers});
  }
  if(url.pathname==="/auth/logout"&&request.method==="POST")return json({ok:true},{status:200,headers:{"Set-Cookie":cookie(COOKIE,"",0)}});
  if(url.pathname==="/api/me"&&request.method==="GET"){const user=await currentUser(request,env);return json({user})}

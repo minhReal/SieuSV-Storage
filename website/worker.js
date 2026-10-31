@@ -132,7 +132,7 @@ async function handle(request,env){
  if(url.pathname.startsWith("/api/profile/")&&request.method==="GET"){
   const publicId=decodeURIComponent(url.pathname.slice("/api/profile/".length));if(!/^[a-f0-9]{16}$/.test(publicId))return json({error:"profile_not_found"},404);
   const user=await env.DB.prepare("SELECT id,public_id,username,display_name,avatar_url,bio,created_at FROM users WHERE public_id=? LIMIT 1").bind(publicId).first();if(!user)return json({error:"profile_not_found"},404);
-  const rows=await env.DB.prepare("SELECT id,title,description,category,created_at FROM scripts WHERE user_id=? AND visibility='public' ORDER BY created_at DESC LIMIT 50").bind(user.id).all();
+  const rows=await env.DB.prepare("SELECT id,title,description,category,thumbnail_url,created_at FROM scripts WHERE user_id=? AND visibility='public' ORDER BY created_at DESC LIMIT 50").bind(user.id).all();
   const history=await env.DB.prepare("SELECT username,changed_at FROM username_history WHERE user_id=? ORDER BY changed_at DESC LIMIT 50").bind(user.id).all();delete user.id;
   return json({user,scripts:rows.results||[],username_history:history.results||[]});
  }

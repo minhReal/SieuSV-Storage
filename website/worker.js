@@ -86,7 +86,7 @@ async function handle(request,env){
   const row=await env.DB.prepare("SELECT username,username_updated_at,display_name,display_name_updated_at FROM users WHERE id=?").bind(user.id).first();
   const usernameChanged=username!==(row?.username||"");
   const displayChanged=display!==(row?.display_name||"");
-  if(usernameChanged&&row?.username_updated_at&&now-row.username_updated_at<259200)return json({error:"username_cooldown",message:"You can change your username once every 3 days."},429,{"Retry-After":String(259200-(now-row.username_updated_at))});
+  if(usernameChanged&&row?.username_updated_at&&now-row.username_updated_at<2592000)return json({error:"username_cooldown",message:"You can change your username once every 30 days."},429,{"Retry-After":String(2592000-(now-row.username_updated_at))});
   if(displayChanged&&row?.display_name_updated_at&&now-row.display_name_updated_at<604800)return json({error:"display_name_cooldown",message:"You can change your display name once every 7 days."},429,{"Retry-After":String(604800-(now-row.display_name_updated_at))});
   try{
    await env.DB.prepare("UPDATE users SET username=?,display_name=?,bio=?,avatar_url=?,username_updated_at=CASE WHEN ? THEN ? ELSE username_updated_at END,display_name_updated_at=CASE WHEN ? THEN ? ELSE display_name_updated_at END WHERE id=?").bind(username,display,bio,avatar,usernameChanged?1:0,now,displayChanged?1:0,now,user.id).run();

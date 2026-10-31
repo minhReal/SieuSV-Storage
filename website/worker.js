@@ -9,12 +9,17 @@ const cookie=(name,value,maxAge)=>name+"="+value+"; Path=/; HttpOnly; Secure; Sa
 function getCookie(req,name){return (req.headers.get("Cookie")||"").split(";").map(x=>x.trim()).find(x=>x.startsWith(name+"="))?.slice(name.length+1)||""}
 async function sign(value,secret){const key=await crypto.subtle.importKey("raw",new TextEncoder().encode(secret),{name:"HMAC",hash:"SHA-256"},false,["sign"]);return b64u(await crypto.subtle.sign("HMAC",key,new TextEncoder().encode(value)))}
 async function makeSession(sub,secret){const payload=b64u(new TextEncoder().encode(JSON.stringify({sub,exp:Math.floor(Date.now()/1000)+604800})));return payload+"."+await sign(payload,secret)}
-async function readSession(req,secret){try{const [p,s]=getCookie(req,COOKIE).split(".");if(!p||!s||!secret)return null;const expected=await sign(p,secret);if(s!==expected)return null;const v=JSON.parse(new TextDecoder().decode(unb64u(p)));return v.exp>Date.now()/1000?v:null}catch{return null}}
+function constantTimeEqual(a,b){if(typeof a!=="string"||typeof b!=="string"||a.length!==b.length)return false;let diff=0;for(let i=0;i<a.length;i++)diff|=a.charCodeAt(i)^b.charCodeAt(i);return diff===0}
+async function readSession(req,secret){try{const [p,s]=getCookie(req,COOKIE).split(".");if(!p||!s||!secret)return null;const expected=await sign(p,secret);if(!constantTimeEqual(s,expected))return null;const v=JSON.parse(new TextDecoder().decode(unb64u(p)));return v&&typeof v.sub==="string"&&v.exp>Date.now()/1000?v:null}catch{return null}}
 async function githubFile(path){if(!path||path.length>500||path.split("/").some(p=>!p||p==="."||p===".."))return null;const r=await fetch("https://raw.githubusercontent.com/"+REPO+"/main/"+path.split("/").map(encodeURIComponent).join("/"),{headers:{"user-agent":"Sieu-Sv_Library"}});return r.ok?await r.text():null}
 async function currentUser(req,env){const session=await readSession(req,env.gg_secret);if(!session)return null;return await env.DB.prepare("SELECT id,public_id,username,display_name,avatar_url,bio,created_at FROM users WHERE google_sub=? LIMIT 1").bind(session.sub).first()}
-export default {async fetch(request,env){
- const url=new URL(request.url),origin=url.origin;
- if(request.method==="OPTIONS")return new Response(null,{status:204,headers:{"access-control-allow-origin":origin,"access-control-allow-methods":"GET,POST,OPTIONS","access-control-allow-headers":"content-type","vary":"Origin"}});
+async function handle(request,env){
+ const url=new URL(request.url),origin=SITE;
+ if(request.method==="POST"&&["/auth/logout","/api/me/profile","/api/scripts"].includes(url.pathname)){
+  if(request.headers.get("Origin")!==url.origin||request.headers.get("Sec-Fetch-Site")==="cross-site")return json({error:"csrf_rejected"},403);
+  if(url.pathname!=="/auth/logout"&&!/^application\\/json(?:\\s*;|$)/i.test(request.headers.get("content-type")||""))return json({error:"json_required"},415);
+ }
+ if(request.method==="OPTIONS")return new Response(null,{status:204,headers:{"Allow":"GET, POST, OPTIONS"}});
  if(url.pathname==="/auth/google"&&request.method==="GET"){
   if(!env.GOOGLE_CLIENT_ID||!env.gg_secret)return json({error:"oauth_not_configured",message:"Missing GOOGLE_CLIENT_ID or gg_secret."},503);
   const state=b64u(crypto.getRandomValues(new Uint8Array(32)));
@@ -44,14 +49,17 @@ export default {async fetch(request,env){
  if(url.pathname==="/api/me"&&request.method==="GET"){const user=await currentUser(request,env);return json({user})}
  if(url.pathname==="/api/me/profile"&&request.method==="POST"){
   const user=await currentUser(request,env);if(!user)return json({error:"unauthorized"},401);
-  let body;try{const raw=await request.text();if(raw.length>370000)return json({error:"payload_too_large",message:"Profile image is too large."},413);body=JSON.parse(raw)}catch{return json({error:"invalid_json"},400)}
+  let body;try{const size=Number(request.headers.get("content-length")||0);if(size>370000)return json({error:"payload_too_large",message:"Profile image is too large."},413);const raw=await request.text();if(raw.length>370000)return json({error:"payload_too_large",message:"Profile image is too large."},413);body=JSON.parse(raw)}catch{return json({error:"invalid_json"},400)}
   const display=String(body.display_name??user.display_name??"").trim(),bio=String(body.bio??user.bio??"").trim(),avatar=String(body.avatar_url??user.avatar_url??"").trim();
   if(display.length<1||display.length>40)return json({error:"invalid_display_name",message:"Display name must be 1-40 characters."},400);
   if(bio.length>160)return json({error:"bio_too_long",message:"Bio must be 160 characters or less."},400);
-  if(avatar&&avatar.length>360000)return json({error:"invalid_avatar",message:"Avatar image is too large."},400);
+  if(avatar&&avatar.length>330000)return json({error:"invalid_avatar",message:"Avatar image is too large."},400);
   if(avatar&&!(/^https:\/\//i.test(avatar)&&avatar.length<=1000)&&!/^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/.test(avatar))return json({error:"invalid_avatar",message:"Avatar must be an HTTPS URL or a supported image uploaded from your device."},400);
+  const now= Math.floor(Date.now()/1000);
+  const profileRate=await env.DB.prepare("INSERT INTO profile_rate_limits (user_id,window_start,request_count) VALUES (?, ?, 1) ON CONFLICT(user_id) DO UPDATE SET request_count=CASE WHEN window_start<=?-3600 THEN 1 ELSE request_count+1 END,window_start=CASE WHEN window_start<=?-3600 THEN ? ELSE window_start END RETURNING request_count").bind(user.id,now,now,now,now).first();
+  if(!profileRate||profileRate.request_count>12)return json({error:"profile_rate_limited",message:"Too many profile updates. Try again later."},429,{"Retry-After":"3600"});
   const row=await env.DB.prepare("SELECT display_name,display_name_updated_at FROM users WHERE id=?").bind(user.id).first();
-  const changed=display!==(row?.display_name||"");const now=Math.floor(Date.now()/1000);
+  const changed=display!==(row?.display_name||"");
   if(changed&&row?.display_name_updated_at&&now-row.display_name_updated_at<604800)return json({error:"display_name_cooldown",message:"You can change your display name once every 7 days."},429,{"Retry-After":String(604800-(now-row.display_name_updated_at))});
   await env.DB.prepare("UPDATE users SET display_name=?,bio=?,avatar_url=?,display_name_updated_at=CASE WHEN ? THEN ? ELSE display_name_updated_at END WHERE id=?").bind(display,bio,avatar,changed?1:0,now,user.id).run();
   return json({ok:true,user:await currentUser(request,env)});
@@ -63,15 +71,16 @@ export default {async fetch(request,env){
  if(url.pathname==="/api/scripts"&&request.method==="GET"){try{const q=(url.searchParams.get("q")||"").slice(0,100);const rows=await env.DB.prepare("SELECT s.id,s.title,s.description,s.category,s.user_id,s.thumbnail_url,s.created_at,s.updated_at,u.username FROM scripts s LEFT JOIN users u ON u.id=s.user_id WHERE s.visibility='public' AND (s.title LIKE ? OR s.description LIKE ?) ORDER BY s.created_at DESC LIMIT 100").bind("%"+q+"%","%"+q+"%").all();return json({scripts:rows.results||[]})}catch{return json({error:"database_error"},500)}}
  if(url.pathname==="/api/scripts"&&request.method==="POST"){
   const user=await currentUser(request,env);if(!user)return json({error:"unauthorized"},401);
-  let body;try{const raw=await request.text();if(raw.length>120000)return json({error:"payload_too_large"},413);body=JSON.parse(raw)}catch{return json({error:"invalid_json"},400)}
-  const title=String(body.title||"").trim().slice(0,80),description=String(body.description||"").trim().slice(0,500),category=String(body.category||"Other").trim().slice(0,40),source=String(body.source||""),thumbnail=String(body.thumbnail_url||"").trim().slice(0,1000);
+  let body;try{const size=Number(request.headers.get("content-length")||0);if(size>450000)return json({error:"payload_too_large"},413);const raw=await request.text();if(raw.length>450000)return json({error:"payload_too_large"},413);body=JSON.parse(raw)}catch{return json({error:"invalid_json"},400)}
+  const title=String(body.title||"").trim().slice(0,80),description=String(body.description||"").trim().slice(0,500),category=String(body.category||"Other").trim().slice(0,40),source=String(body.source||""),thumbnail=String(body.thumbnail_url||"").trim();
   if(title.length<2)return json({error:"invalid_title",message:"Title must contain 2 to 80 characters."},400);
   if(source.length<1||source.length>100000)return json({error:"invalid_source",message:"Source must be between 1 and 100000 characters."},400);
-  if(thumbnail&&!/^https:\/\//i.test(thumbnail))return json({error:"invalid_thumbnail",message:"Thumbnail must be an HTTPS image URL."},400);
+  if(thumbnail&&thumbnail.length>250000)return json({error:"invalid_thumbnail",message:"Thumbnail image is too large."},400);
+  if(thumbnail&&!(/^https:\/\//i.test(thumbnail)&&thumbnail.length<=1000)&&!/^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/.test(thumbnail))return json({error:"invalid_thumbnail",message:"Thumbnail must be an HTTPS URL or a supported uploaded image."},400);
   if(env.TURNSTILE_SECRET_KEY){
-   const token=String(body.turnstileToken||"");if(!token)return json({error:"captcha_required"},400);
+   const token=String(body.turnstileToken||"");if(!token||token.length>2048)return json({error:"captcha_required"},400);
    const verify=await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify",{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body:new URLSearchParams({secret:env.TURNSTILE_SECRET_KEY,response:token,remoteip:request.headers.get("CF-Connecting-IP")||""})});
-   const result=await verify.json();if(!result.success)return json({error:"captcha_failed"},403);
+   const result=await verify.json();if(!result.success||result.hostname!==url.hostname)return json({error:"captcha_failed"},403);
   }
   const now=Math.floor(Date.now()/1000);
   const rate=await env.DB.prepare("INSERT INTO upload_rate_limits (user_id,window_start,request_count) VALUES (?, ?, 1) ON CONFLICT(user_id) DO UPDATE SET request_count=CASE WHEN window_start<=?-3600 THEN 1 ELSE request_count+1 END,window_start=CASE WHEN window_start<=?-3600 THEN ? ELSE window_start END RETURNING request_count").bind(user.id,now,now,now,now).first();
@@ -90,4 +99,35 @@ export default {async fetch(request,env){
   const page=await fetch("https://raw.githubusercontent.com/"+REPO+"/main/website/index.html");if(!page.ok)return new Response("Website source not found",{status:502});return new Response(await page.text(),{headers:{"content-type":"text/html; charset=utf-8","cache-control":"no-cache"}});
  }
  return json({error:"not_found"},404)
+}
+async function secureResponse(response){
+ const headers=new Headers(response.headers);
+ headers.set("X-Content-Type-Options","nosniff");
+ headers.set("X-Frame-Options","DENY");
+ headers.set("Referrer-Policy","strict-origin-when-cross-origin");
+ headers.set("Permissions-Policy","camera=(), microphone=(), geolocation=(), payment=()");
+ headers.set("Strict-Transport-Security","max-age=31536000");
+ headers.set("Cross-Origin-Opener-Policy","same-origin-allow-popups");
+ headers.set("X-DNS-Prefetch-Control","off");
+ let body=response.body;
+ const type=headers.get("content-type")||"";
+ if(type.includes("text/html")){
+  const html=await response.text(),hashes=[];
+  for(const match of html.matchAll(/<script\\b(?![^>]*\\bsrc=)[^>]*>([\\s\\S]*?)<\\/script>/gi)){
+   if(!match[1].trim())continue;
+   const digest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(match[1]));
+   hashes.push("'sha256-"+btoa(String.fromCharCode(...new Uint8Array(digest)))+"'");
+  }
+  const scriptPolicy=["'self'","https://challenges.cloudflare.com",...hashes].join(" ");
+  headers.set("Content-Security-Policy","default-src 'self'; script-src "+scriptPolicy+"; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; form-action 'self' https://accounts.google.com; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; upgrade-insecure-requests");
+  headers.set("Cache-Control","no-store");
+  body=html;
+ }else if(!headers.has("Content-Security-Policy")){
+  headers.set("Content-Security-Policy","default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'");
+ }
+ return new Response(body,{status:response.status,statusText:response.statusText,headers});
+}
+export default {async fetch(request,env){
+ try{return await secureResponse(await handle(request,env))}
+ catch(error){return await secureResponse(json({error:"internal_error"},500))}
 }};

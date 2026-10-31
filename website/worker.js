@@ -11,7 +11,7 @@ async function sign(value,secret){const key=await crypto.subtle.importKey("raw",
 async function makeSession(sub,secret){const payload=b64u(new TextEncoder().encode(JSON.stringify({sub,exp:Math.floor(Date.now()/1000)+604800})));return payload+"."+await sign(payload,secret)}
 async function readSession(req,secret){try{const [p,s]=getCookie(req,COOKIE).split(".");if(!p||!s||!secret)return null;const expected=await sign(p,secret);if(s!==expected)return null;const v=JSON.parse(new TextDecoder().decode(unb64u(p)));return v.exp>Date.now()/1000?v:null}catch{return null}}
 async function githubFile(path){if(!path||path.length>500||path.split("/").some(p=>!p||p==="."||p===".."))return null;const r=await fetch("https://raw.githubusercontent.com/"+REPO+"/main/"+path.split("/").map(encodeURIComponent).join("/"),{headers:{"user-agent":"Sieu-Sv_Library"}});return r.ok?await r.text():null}
-async function currentUser(req,env){const session=await readSession(req,env.gg_secret);if(!session)return null;return await env.DB.prepare("SELECT id,username,display_name,avatar_url,bio,created_at FROM users WHERE google_sub=? LIMIT 1").bind(session.sub).first()}
+async function currentUser(req,env){const session=await readSession(req,env.gg_secret);if(!session)return null;return await env.DB.prepare("SELECT id,public_id,username,display_name,avatar_url,bio,created_at FROM users WHERE google_sub=? LIMIT 1").bind(session.sub).first()}
 export default {async fetch(request,env){
  const url=new URL(request.url),origin=url.origin;
  if(request.method==="OPTIONS")return new Response(null,{status:204,headers:{"access-control-allow-origin":origin,"access-control-allow-methods":"GET,POST,OPTIONS","access-control-allow-headers":"content-type","vary":"Origin"}});
@@ -32,11 +32,11 @@ export default {async fetch(request,env){
   const userRes=await fetch("https://www.googleapis.com/oauth2/v3/userinfo",{headers:{authorization:"Bearer "+token.access_token}});
   const profile=await userRes.json();
   if(!userRes.ok||!profile.sub||!profile.email_verified)return new Response("Google account could not be verified.",{status:401});
-  const old=await env.DB.prepare("SELECT id,username FROM users WHERE google_sub=? LIMIT 1").bind(profile.sub).first();
+  const old=await env.DB.prepare("SELECT id,public_id,username FROM users WHERE google_sub=? LIMIT 1").bind(profile.sub).first();
   let username=old?.username;
   if(!username){const base=(profile.email.split("@")[0]||"user").toLowerCase().replace(/[^a-z0-9_]/g,"").slice(0,20)||"user";username=base+"_"+crypto.randomUUID().slice(0,6)}
   const id=old?.id||profile.sub;
-  await env.DB.prepare("INSERT INTO users (id,google_sub,username,display_name,avatar_url) VALUES (?,?,?,?,?) ON CONFLICT(google_sub) DO UPDATE SET display_name=excluded.display_name,avatar_url=excluded.avatar_url").bind(id,profile.sub,username,profile.name||username,profile.picture||"").run();
+  await env.DB.prepare("INSERT INTO users (id,google_sub,username,display_name,avatar_url,public_id) VALUES (?,?,?,?,?,?) ON CONFLICT(google_sub) DO UPDATE SET display_name=excluded.display_name,avatar_url=excluded.avatar_url").bind(id,profile.sub,username,profile.name||username,profile.picture||"",old?.public_id||crypto.randomUUID().replaceAll("-","").slice(0,16)).run();
   const session=await makeSession(profile.sub,env.gg_secret);
   const headers=new Headers({Location:origin+"/?login=success","Cache-Control":"no-store"});headers.append("Set-Cookie",cookie(COOKIE,session,604800));headers.append("Set-Cookie",cookie(STATE_COOKIE,"",0));return new Response(null,{status:302,headers});
  }
@@ -47,8 +47,32 @@ export default {async fetch(request,env){
  if(url.pathname==="/api/github/script"&&request.method==="GET"){const path=url.searchParams.get("path")||"";if(!path.toLowerCase().endsWith(".lua"))return json({error:"invalid_script_path"},400);const source=await githubFile(path);if(source===null)return json({error:"script_not_found"},404);const title=path.split("/").pop().replace(/\\.lua$/i,"");return json({title,name:title,source,path,description:"Lua script from the Sieu-Sv_Library repository",category:"GitHub",author:"minhReal",username:"minhReal",kind:"GitHub"})}
  if(url.pathname.startsWith("/api/scripts/")&&request.method==="GET"){const id=decodeURIComponent(url.pathname.slice("/api/scripts/".length));if(!id||id.length>128)return json({error:"invalid_id"},400);try{const row=await env.DB.prepare("SELECT s.id,s.title,s.description,s.category,s.user_id,s.source,s.created_at,s.updated_at,u.username,u.display_name,u.avatar_url FROM scripts s LEFT JOIN users u ON u.id=s.user_id WHERE s.id=? AND s.visibility='public' LIMIT 1").bind(id).first();if(!row)return json({error:"script_not_found"},404);return json({...row,owner:row.display_name||row.username||"community",kind:"Community"})}catch{return json({error:"database_error"},500)}}
  if(url.pathname==="/api/scripts"&&request.method==="GET"){try{const q=(url.searchParams.get("q")||"").slice(0,100);const rows=await env.DB.prepare("SELECT s.id,s.title,s.description,s.category,s.user_id,s.created_at,s.updated_at,u.username FROM scripts s LEFT JOIN users u ON u.id=s.user_id WHERE s.visibility='public' AND (s.title LIKE ? OR s.description LIKE ?) ORDER BY s.created_at DESC LIMIT 100").bind("%"+q+"%","%"+q+"%").all();return json({scripts:rows.results||[]})}catch{return json({error:"database_error"},500)}}
- if(url.pathname==="/api/scripts"&&request.method==="POST")return json({error:"publishing_not_ready",message:"Sign-in is enabled, but the publish workflow is not implemented yet."},501);
+ if(url.pathname==="/api/scripts"&&request.method==="POST"){
+  const user=await currentUser(request,env);if(!user)return json({error:"unauthorized"},401);
+  let body;try{const raw=await request.text();if(raw.length>120000)return json({error:"payload_too_large"},413);body=JSON.parse(raw)}catch{return json({error:"invalid_json"},400)}
+  const title=String(body.title||"").trim().slice(0,80),description=String(body.description||"").trim().slice(0,500),category=String(body.category||"Other").trim().slice(0,40),source=String(body.source||"");
+  if(title.length<2)return json({error:"invalid_title",message:"Title must contain 2 to 80 characters."},400);
+  if(source.length<1||source.length>100000)return json({error:"invalid_source",message:"Source must be between 1 and 100000 characters."},400);
+  if(env.TURNSTILE_SECRET_KEY){
+   const token=String(body.turnstileToken||"");if(!token)return json({error:"captcha_required"},400);
+   const verify=await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify",{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body:new URLSearchParams({secret:env.TURNSTILE_SECRET_KEY,response:token,remoteip:request.headers.get("CF-Connecting-IP")||""})});
+   const result=await verify.json();if(!result.success)return json({error:"captcha_failed"},403);
+  }
+  const now=Math.floor(Date.now()/1000);
+  const rate=await env.DB.prepare("INSERT INTO upload_rate_limits (user_id,window_start,request_count) VALUES (?, ?, 1) ON CONFLICT(user_id) DO UPDATE SET request_count=CASE WHEN window_start<=?-3600 THEN 1 ELSE request_count+1 END,window_start=CASE WHEN window_start<=?-3600 THEN ? ELSE window_start END RETURNING request_count").bind(user.id,now,now,now,now).first();
+  if(!rate||rate.request_count>5)return json({error:"rate_limited",message:"Upload limit reached. Try again later."},429,{"Retry-After":"3600"});
+  const id=crypto.randomUUID();
+  try{await env.DB.prepare("INSERT INTO scripts (id,user_id,title,description,category,source,visibility) VALUES (?,?,?,?,?,?, 'public')").bind(id,user.id,title,description,category,source).run();return json({ok:true,id,url:origin+"/script?id="+encodeURIComponent(id)},201)}catch{return json({error:"database_error"},500)}
+ }
+ if(url.pathname.startsWith("/api/profile/")&&request.method==="GET"){
+  const publicId=decodeURIComponent(url.pathname.slice("/api/profile/".length));if(!/^[a-f0-9]{16}$/.test(publicId))return json({error:"profile_not_found"},404);
+  const user=await env.DB.prepare("SELECT public_id,username,display_name,avatar_url,bio,created_at FROM users WHERE public_id=? LIMIT 1").bind(publicId).first();if(!user)return json({error:"profile_not_found"},404);
+  const rows=await env.DB.prepare("SELECT id,title,description,category,created_at FROM scripts WHERE user_id=(SELECT id FROM users WHERE public_id=?) AND visibility='public' ORDER BY created_at DESC LIMIT 50").bind(publicId).all();
+  return json({user,scripts:rows.results||[]});
+ }
  if(url.pathname==="/script"||url.pathname.startsWith("/script/")){const page=await fetch("https://raw.githubusercontent.com/"+REPO+"/main/website/script.html");if(!page.ok)return new Response("Script page source not found",{status:502});return new Response(await page.text(),{headers:{"content-type":"text/html; charset=utf-8","cache-control":"no-cache"}})}
- if(url.pathname==="/"){const page=await fetch("https://raw.githubusercontent.com/"+REPO+"/main/website/index.html");if(!page.ok)return new Response("Website source not found",{status:502});return new Response(await page.text(),{headers:{"content-type":"text/html; charset=utf-8","cache-control":"no-cache"}})}
+ if(url.pathname==="/"||["/home","/explore","/upload","/settings","/profile"].includes(url.pathname)||/^\/profile\/[a-f0-9]{16}$/.test(url.pathname)){
+  const page=await fetch("https://raw.githubusercontent.com/"+REPO+"/main/website/index.html");if(!page.ok)return new Response("Website source not found",{status:502});return new Response(await page.text(),{headers:{"content-type":"text/html; charset=utf-8","cache-control":"no-cache"}});
+ }
  return json({error:"not_found"},404)
 }};

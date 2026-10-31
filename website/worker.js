@@ -89,7 +89,8 @@ async function handle(request,env){
   if(usernameChanged&&row?.username_updated_at&&now-row.username_updated_at<2592000)return json({error:"username_cooldown",message:"You can change your username once every 30 days."},429,{"Retry-After":String(2592000-(now-row.username_updated_at))});
   if(displayChanged&&row?.display_name_updated_at&&now-row.display_name_updated_at<604800)return json({error:"display_name_cooldown",message:"You can change your display name once every 7 days."},429,{"Retry-After":String(604800-(now-row.display_name_updated_at))});
   try{
-   await env.DB.prepare("UPDATE users SET username=?,display_name=?,bio=?,avatar_url=?,username_updated_at=CASE WHEN ? THEN ? ELSE username_updated_at END,display_name_updated_at=CASE WHEN ? THEN ? ELSE display_name_updated_at END WHERE id=?").bind(username,display,bio,avatar,usernameChanged?1:0,now,displayChanged?1:0,now,user.id).run();
+   if(usernameChanged){await env.DB.batch([env.DB.prepare("INSERT INTO username_history (user_id,username,changed_at) VALUES (?,?,?)").bind(user.id,row.username,now),env.DB.prepare("UPDATE users SET username=?,display_name=?,bio=?,avatar_url=?,username_updated_at=?,display_name_updated_at=CASE WHEN ? THEN ? ELSE display_name_updated_at END WHERE id=?").bind(username,display,bio,avatar,now,displayChanged?1:0,now,user.id)]);}
+   else{await env.DB.prepare("UPDATE users SET display_name=?,bio=?,avatar_url=?,display_name_updated_at=CASE WHEN ? THEN ? ELSE display_name_updated_at END WHERE id=?").bind(display,bio,avatar,displayChanged?1:0,now,user.id).run();}
   }catch{return json({error:"username_taken",message:"That username is already in use. Choose another one."},409)}
   return json({ok:true,user:await currentUser(request,env)});
  }

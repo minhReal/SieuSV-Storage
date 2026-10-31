@@ -131,9 +131,10 @@ async function handle(request,env){
  }
  if(url.pathname.startsWith("/api/profile/")&&request.method==="GET"){
   const publicId=decodeURIComponent(url.pathname.slice("/api/profile/".length));if(!/^[a-f0-9]{16}$/.test(publicId))return json({error:"profile_not_found"},404);
-  const user=await env.DB.prepare("SELECT public_id,username,display_name,avatar_url,bio,created_at FROM users WHERE public_id=? LIMIT 1").bind(publicId).first();if(!user)return json({error:"profile_not_found"},404);
-  const rows=await env.DB.prepare("SELECT id,title,description,category,created_at FROM scripts WHERE user_id=(SELECT id FROM users WHERE public_id=?) AND visibility='public' ORDER BY created_at DESC LIMIT 50").bind(publicId).all();
-  return json({user,scripts:rows.results||[]});
+  const user=await env.DB.prepare("SELECT id,public_id,username,display_name,avatar_url,bio,created_at FROM users WHERE public_id=? LIMIT 1").bind(publicId).first();if(!user)return json({error:"profile_not_found"},404);
+  const rows=await env.DB.prepare("SELECT id,title,description,category,created_at FROM scripts WHERE user_id=? AND visibility='public' ORDER BY created_at DESC LIMIT 50").bind(user.id).all();
+  const history=await env.DB.prepare("SELECT username,changed_at FROM username_history WHERE user_id=? ORDER BY changed_at DESC LIMIT 50").bind(user.id).all();delete user.id;
+  return json({user,scripts:rows.results||[],username_history:history.results||[]});
  }
  if(url.pathname==="/script"||url.pathname.startsWith("/script/")){const page=await fetch("https://raw.githubusercontent.com/"+REPO+"/main/website/script.html");if(!page.ok)return new Response("Script page source not found",{status:502});return new Response(await page.text(),{headers:{"content-type":"text/html; charset=utf-8","cache-control":"no-cache"}})}
  if(url.pathname==="/"||["/home","/explore","/upload","/settings","/profile"].includes(url.pathname)||/^\/profile\/[a-f0-9]{16}$/.test(url.pathname)){

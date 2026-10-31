@@ -36,7 +36,7 @@ async function githubFile(path,request){
   return {status:503,source:null};
  }
 }
-async function currentUser(req,env){const session=await readSession(req,env.gg_secret);if(!session)return null;return await env.DB.prepare("SELECT id,public_id,username,display_name,avatar_url,bio,created_at FROM users WHERE google_sub=? LIMIT 1").bind(session.sub).first()}
+async function currentUser(req,env){const session=await readSession(req,env.gg_secret);if(!session)return null;return await env.DB.prepare("SELECT id,public_id,username,display_name,avatar_url,bio,created_at,username_updated_at FROM users WHERE google_sub=? LIMIT 1").bind(session.sub).first()}
 async function handle(request,env){
  const url=new URL(request.url),origin=SITE;
  if((request.method==="POST"||request.method==="PUT")&&(["/auth/logout","/api/me/profile","/api/scripts"].includes(url.pathname)||(request.method==="PUT"&&url.pathname.startsWith("/api/scripts/")))){
@@ -74,7 +74,8 @@ async function handle(request,env){
  if(url.pathname==="/api/me/profile"&&request.method==="POST"){
   const user=await currentUser(request,env);if(!user)return json({error:"unauthorized"},401);
   let body;try{const size=Number(request.headers.get("content-length")||0);if(size>370000)return json({error:"payload_too_large",message:"Profile image is too large."},413);const raw=await request.text();if(raw.length>370000)return json({error:"payload_too_large",message:"Profile image is too large."},413);body=JSON.parse(raw)}catch{return json({error:"invalid_json"},400)}
-  const display=String(body.display_name??user.display_name??"").trim(),bio=String(body.bio??user.bio??"").trim(),avatar=String(body.avatar_url??user.avatar_url??"").trim();
+  const username=String(body.username??user.username??"").trim().toLowerCase(),display=String(body.display_name??user.display_name??"").trim(),bio=String(body.bio??user.bio??"").trim(),avatar=String(body.avatar_url??user.avatar_url??"").trim();
+  if(!/^[a-z0-9_]{3,20}$/.test(username))return json({error:"invalid_username",message:"Username must be 3-20 characters and use only lowercase letters, numbers or underscores."},400);
   if(display.length<1||display.length>40)return json({error:"invalid_display_name",message:"Display name must be 1-40 characters."},400);
   if(bio.length>160)return json({error:"bio_too_long",message:"Bio must be 160 characters or less."},400);
   if(avatar&&avatar.length>330000)return json({error:"invalid_avatar",message:"Avatar image is too large."},400);
@@ -82,10 +83,14 @@ async function handle(request,env){
   const now= Math.floor(Date.now()/1000);
   const profileRate=await env.DB.prepare("INSERT INTO profile_rate_limits (user_id,window_start,request_count) VALUES (?, ?, 1) ON CONFLICT(user_id) DO UPDATE SET request_count=CASE WHEN window_start<=?-3600 THEN 1 ELSE request_count+1 END,window_start=CASE WHEN window_start<=?-3600 THEN ? ELSE window_start END RETURNING request_count").bind(user.id,now,now,now,now).first();
   if(!profileRate||profileRate.request_count>12)return json({error:"profile_rate_limited",message:"Too many profile updates. Try again later."},429,{"Retry-After":"3600"});
-  const row=await env.DB.prepare("SELECT display_name,display_name_updated_at FROM users WHERE id=?").bind(user.id).first();
-  const changed=display!==(row?.display_name||"");
-  if(changed&&row?.display_name_updated_at&&now-row.display_name_updated_at<604800)return json({error:"display_name_cooldown",message:"You can change your display name once every 7 days."},429,{"Retry-After":String(604800-(now-row.display_name_updated_at))});
-  await env.DB.prepare("UPDATE users SET display_name=?,bio=?,avatar_url=?,display_name_updated_at=CASE WHEN ? THEN ? ELSE display_name_updated_at END WHERE id=?").bind(display,bio,avatar,changed?1:0,now,user.id).run();
+  const row=await env.DB.prepare("SELECT username,username_updated_at,display_name,display_name_updated_at FROM users WHERE id=?").bind(user.id).first();
+  const usernameChanged=username!==(row?.username||"");
+  const displayChanged=display!==(row?.display_name||"");
+  if(usernameChanged&&row?.username_updated_at&&now-row.username_updated_at<259200)return json({error:"username_cooldown",message:"You can change your username once every 3 days."},429,{"Retry-After":String(259200-(now-row.username_updated_at))});
+  if(displayChanged&&row?.display_name_updated_at&&now-row.display_name_updated_at<604800)return json({error:"display_name_cooldown",message:"You can change your display name once every 7 days."},429,{"Retry-After":String(604800-(now-row.display_name_updated_at))});
+  try{
+   await env.DB.prepare("UPDATE users SET username=?,display_name=?,bio=?,avatar_url=?,username_updated_at=CASE WHEN ? THEN ? ELSE username_updated_at END,display_name_updated_at=CASE WHEN ? THEN ? ELSE display_name_updated_at END WHERE id=?").bind(username,display,bio,avatar,usernameChanged?1:0,now,displayChanged?1:0,now,user.id).run();
+  }catch{return json({error:"username_taken",message:"That username is already in use. Choose another one."},409)}
   return json({ok:true,user:await currentUser(request,env)});
  }
  if(url.pathname==="/api/health"){let database=false;try{await env.DB.prepare("SELECT 1").first();database=true}catch{}return json({ok:true,service:"Sieu-Sv_Library API",database})}

@@ -1,6 +1,6 @@
 {
  "$schema":"https://unpkg.com/wrangler@latest/config-schema.json",
- "name":"sieusv-storage-api",
+ "name":"sieu-sv-library-api",
  "main":"worker.js",
  "compatibility_date":"2025-03-01",
  "d1_databases":[{"binding":"DB","database_name":"sieusv-storage-db","database_id":"98b74356-f5e7-424d-adf8-a8f1aef76e6b"}]

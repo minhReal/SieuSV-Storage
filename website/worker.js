@@ -75,7 +75,7 @@ async function handle(request,env){
   const user=await currentUser(request,env);if(!user)return json({error:"unauthorized"},401);
   let body;try{const size=Number(request.headers.get("content-length")||0);if(size>370000)return json({error:"payload_too_large",message:"Profile image is too large."},413);const raw=await request.text();if(raw.length>370000)return json({error:"payload_too_large",message:"Profile image is too large."},413);body=JSON.parse(raw)}catch{return json({error:"invalid_json"},400)}
   const username=String(body.username??user.username??"").trim().toLowerCase(),display=String(body.display_name??user.display_name??"").trim(),bio=String(body.bio??user.bio??"").trim(),avatar=String(body.avatar_url??user.avatar_url??"").trim();
-  if(!/^[a-z0-9_]{3,20}$/.test(username))return json({error:"invalid_username",message:"Username must be 3-20 characters and use only lowercase letters, numbers or underscores."},400);
+  if(!/^[a-z0-9_]{3,32}$/.test(username))return json({error:"invalid_username",message:"Username must be 3-32 characters and use only lowercase letters, numbers or underscores."},400);
   if(display.length<1||display.length>40)return json({error:"invalid_display_name",message:"Display name must be 1-40 characters."},400);
   if(bio.length>160)return json({error:"bio_too_long",message:"Bio must be 160 characters or less."},400);
   if(avatar&&avatar.length>330000)return json({error:"invalid_avatar",message:"Avatar image is too large."},400);

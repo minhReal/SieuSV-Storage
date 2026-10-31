@@ -7,7 +7,7 @@
 <main class="wrap">
 <section id="home" class="page active"><div class="hero"><div class="eyebrow">Community script library</div><h1>Scripts made by the community.</h1><p>Discover, share and explore scripts and projects from Sieu-Sv_Library creators.</p><div class="search"><input id="search" placeholder="Search scripts or usernames..."><button class="btn primary" id="searchBtn">Search</button></div></div><div class="head"><h2>Recently added</h2><span class="muted" id="count"></span></div><div class="grid" id="homeGrid"></div></section>
 <section id="explore" class="page"><div class="hero"><div class="eyebrow">Browse library</div><h1>Explore scripts</h1><p>Find scripts from GitHub and community creators.</p><div class="search"><input id="exploreSearch" placeholder="Script name, creator, keyword..."><button class="btn primary" id="exploreBtn">Search</button></div></div><div class="grid" id="exploreGrid"></div></section>
-<section id="profile" class="page"><div class="head"><h2>Profile</h2></div><div class="profile"><h2>Guest profile</h2><p class="muted">Sign in with Google when authentication is configured.</p></div><div class="head"><h2>Your scripts</h2></div><div class="grid" id="profileGrid"><div class="empty">Sign in to view your scripts.</div></div></section>
+<section id="profile" class="page"><div class="head"><h2>Profile</h2></div><div class="profile" id="profileInfo"><h2>Guest profile</h2><p class="muted">Sign in with Google to access your account.</p></div><div class="head"><h2>Your scripts</h2></div><div class="grid" id="profileGrid"><div class="empty">Sign in to view your scripts.</div></div></section>
 <section id="settings" class="page"><div class="hero"><div class="eyebrow">Account</div><h1>Settings</h1><p>Manage your profile and account preferences.</p></div><div class="setting"><b>Account</b><p class="muted">Google sign-in setup is pending.</p></div><div class="setting"><b>Security</b><p class="muted">Account security settings will appear after sign-in is enabled.</p></div><div class="setting"><b>GitHub sync</b><p class="muted">Public Lua files are synced from minhReal/SieuSV-Storage.</p></div></section>
 <div class="foot">Sieu-Sv_Library · Community scripts and projects</div></main>
 <div class="modal" id="modal"><div class="dialog"><button class="close" id="close">×</button><div class="eyebrow">Script source</div><h2 id="modalTitle"></h2><p class="muted" id="modalInfo"></p><pre id="source">Loading...</pre><button class="btn primary" id="copy">Copy source</button></div></div>
@@ -26,5 +26,14 @@ $('menu').onclick=()=>$('nav').classList.toggle('open');document.addEventListene
 $('search').oninput=home;$('searchBtn').onclick=home;$('exploreSearch').oninput=()=>render(filter($('exploreSearch').value),'exploreGrid');$('exploreBtn').onclick=()=>render(filter($('exploreSearch').value),'exploreGrid');
 async function openScript(s){if(!s)return;$('modalTitle').textContent=s.title||s.name;$('modalInfo').textContent='@'+(s.username||s.author||'community')+' · '+(s.path||s.category||'Community');$('source').textContent='Loading...';$('modal').classList.add('show');try{if(s.source)$('source').textContent=s.source;else{let r=await fetch(s.url);if(!r.ok)throw Error();$('source').textContent=await r.text()}}catch{$('source').textContent='Unable to load source.'}}
 $('close').onclick=()=>$('modal').classList.remove('show');$('modal').onclick=e=>{if(e.target===$('modal'))$('modal').classList.remove('show')};$('copy').onclick=async()=>{try{await navigator.clipboard.writeText($('source').textContent);$('copy').textContent='Copied'}catch{$('copy').textContent='Copy unavailable'}};
-const auth=()=>alert('Google OAuth is not configured yet. Publishing is disabled until secure sign-in is enabled.');$('login').onclick=auth;$('publish').onclick=auth;load();
+let me=null;
+async function refreshAuth(){
+ try{const r=await fetch('/api/me',{credentials:'same-origin'});const d=await r.json();me=d.user||null}catch{me=null}
+ $('login').textContent=me?'Log out':'Log in';
+ $('profileInfo').innerHTML=me?'<h2>'+esc(me.display_name||me.username||'User')+'</h2><p class="muted">@'+esc(me.username||'user')+'</p>'+(me.avatar_url?'<img src="'+esc(me.avatar_url)+'" alt="" style="width:64px;height:64px;border-radius:50%;object-fit:cover">':''):'<h2>Guest profile</h2><p class="muted">Sign in with Google to access your account.</p>';
+}
+$('login').onclick=async()=>{if(!me){location.href='/auth/google';return}await fetch('/auth/logout',{method:'POST',credentials:'same-origin'});me=null;await refreshAuth()};
+$('publish').onclick=()=>{if(!me){location.href='/auth/google';return}alert('Your account is signed in. Script publishing is not available yet.')};
+if(new URLSearchParams(location.search).has('login'))history.replaceState({},'',location.pathname);
+refreshAuth();load();
 </script></body></html>

@@ -17,7 +17,7 @@ async function handle(request,env){
  const url=new URL(request.url),origin=SITE;
  if(request.method==="POST"&&["/auth/logout","/api/me/profile","/api/scripts"].includes(url.pathname)){
   if(request.headers.get("Origin")!==url.origin||request.headers.get("Sec-Fetch-Site")==="cross-site")return json({error:"csrf_rejected"},403);
-  if(url.pathname!=="/auth/logout"&&!/^application\\/json(?:\\s*;|$)/i.test(request.headers.get("content-type")||""))return json({error:"json_required"},415);
+  if(url.pathname!=="/auth/logout"&&!/^application\/json(?:\s*;|$)/i.test(request.headers.get("content-type")||""))return json({error:"json_required"},415);
  }
  if(request.method==="OPTIONS")return new Response(null,{status:204,headers:{"Allow":"GET, POST, OPTIONS"}});
  if(url.pathname==="/auth/google"&&request.method==="GET"){
@@ -113,7 +113,7 @@ async function secureResponse(response){
  const type=headers.get("content-type")||"";
  if(type.includes("text/html")){
   const html=await response.text(),hashes=[];
-  for(const match of html.matchAll(/<script\\b(?![^>]*\\bsrc=)[^>]*>([\\s\\S]*?)<\\/script>/gi)){
+  for(const match of html.matchAll(/<script\b(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)){
    if(!match[1].trim())continue;
    const digest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(match[1]));
    hashes.push("'sha256-"+btoa(String.fromCharCode(...new Uint8Array(digest)))+"'");

@@ -39,7 +39,7 @@ async function githubFile(path,request){
 async function currentUser(req,env){const session=await readSession(req,env.gg_secret);if(!session)return null;return await env.DB.prepare("SELECT id,public_id,username,display_name,avatar_url,bio,created_at FROM users WHERE google_sub=? LIMIT 1").bind(session.sub).first()}
 async function handle(request,env){
  const url=new URL(request.url),origin=SITE;
- if(request.method==="POST"&&["/auth/logout","/api/me/profile","/api/scripts"].includes(url.pathname)){
+ if((request.method==="POST"||request.method==="PUT")&&(["/auth/logout","/api/me/profile","/api/scripts"].includes(url.pathname)||(request.method==="PUT"&&url.pathname.startsWith("/api/scripts/")))){
   if(request.headers.get("Origin")!==url.origin||request.headers.get("Sec-Fetch-Site")==="cross-site")return json({error:"csrf_rejected"},403);
   if(url.pathname!=="/auth/logout"&&!/^application\/json(?:\s*;|$)/i.test(request.headers.get("content-type")||""))return json({error:"json_required"},415);
  }
@@ -111,6 +111,17 @@ async function handle(request,env){
   if(!rate||rate.request_count>5)return json({error:"rate_limited",message:"Upload limit reached. Try again later."},429,{"Retry-After":"3600"});
   const id=crypto.randomUUID();
   try{await env.DB.prepare("INSERT INTO scripts (id,user_id,title,description,category,source,thumbnail_url,visibility) VALUES (?,?,?,?,?,?,?, 'public')").bind(id,user.id,title,description,category,source,thumbnail||null).run();return json({ok:true,id,url:origin+"/script?id="+encodeURIComponent(id)},201)}catch{return json({error:"database_error"},500)}
+ }
+ if(url.pathname.startsWith("/api/scripts/")&&request.method==="PUT"){
+  const user=await currentUser(request,env);if(!user)return json({error:"unauthorized"},401);
+  const id=decodeURIComponent(url.pathname.slice("/api/scripts/".length));if(!id||id.length>128)return json({error:"invalid_id"},400);
+  let body;try{const size=Number(request.headers.get("content-length")||0);if(size>450000)return json({error:"payload_too_large"},413);const raw=await request.text();if(raw.length>450000)return json({error:"payload_too_large"},413);body=JSON.parse(raw)}catch{return json({error:"invalid_json"},400)}
+  const title=String(body.title||"").trim().slice(0,80),description=String(body.description||"").trim().slice(0,500),category=String(body.category||"Other").trim().slice(0,40),source=String(body.source||""),thumbnail=String(body.thumbnail_url||"").trim();
+  if(title.length<2)return json({error:"invalid_title",message:"Title must contain 2 to 80 characters."},400);
+  if(source.length<1||source.length>100000)return json({error:"invalid_source",message:"Source must be between 1 and 100000 characters."},400);
+  if(thumbnail&&thumbnail.length>250000)return json({error:"invalid_thumbnail"},400);
+  if(thumbnail&&!(/^https:\/\//i.test(thumbnail)&&thumbnail.length<=1000)&&!/^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/.test(thumbnail))return json({error:"invalid_thumbnail"},400);
+  try{const result=await env.DB.prepare("UPDATE scripts SET title=?,description=?,category=?,source=?,thumbnail_url=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND user_id=?").bind(title,description,category,source,thumbnail||null,id,user.id).run();if(!result.meta?.changes)return json({error:"script_not_found_or_forbidden"},404);return json({ok:true,id})}catch{return json({error:"database_error"},500)}
  }
  if(url.pathname.startsWith("/api/profile/")&&request.method==="GET"){
   const publicId=decodeURIComponent(url.pathname.slice("/api/profile/".length));if(!/^[a-f0-9]{16}$/.test(publicId))return json({error:"profile_not_found"},404);

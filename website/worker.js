@@ -1,5 +1,6 @@
 const REPO="minhReal/SieuSV-Storage";
 const SITE="https://sieu-sv-library-api.sieusv-storage-minhreal.workers.dev";
+const PAGES_ORIGIN="https://minhreal.github.io";
 const COOKIE="ssv_session";
 const STATE_COOKIE="ssv_oauth_state";
 const json=(data,status=200,headers={})=>new Response(JSON.stringify(data),{status,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store",...headers}});
@@ -183,6 +184,19 @@ async function secureResponse(response){
  return new Response(body,{status:response.status,statusText:response.statusText,headers});
 }
 export default {async fetch(request,env){
- try{return await secureResponse(await handle(request,env))}
- catch(error){return await secureResponse(json({error:"internal_error"},500))}
+ try{
+  const response=await secureResponse(await handle(request,env));
+  const origin=request.headers.get("Origin")||"";
+  const path=new URL(request.url).pathname;
+  if(origin===PAGES_ORIGIN&&path.startsWith("/api/")){
+   const headers=new Headers(response.headers);
+   headers.set("Access-Control-Allow-Origin",PAGES_ORIGIN);
+   headers.set("Access-Control-Allow-Methods","GET, OPTIONS");
+   headers.set("Access-Control-Allow-Headers","Content-Type");
+   headers.set("Access-Control-Max-Age","86400");
+   headers.append("Vary","Origin");
+   return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
+  }
+  return response;
+ }catch(error){return await secureResponse(json({error:"internal_error"},500))}
 }};

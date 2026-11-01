@@ -150,9 +150,23 @@ async function handle(request,env){
   const history=await env.DB.prepare("SELECT username,changed_at FROM username_history WHERE user_id=? ORDER BY changed_at DESC LIMIT 50").bind(user.id).all();delete user.id;
   return json({user,scripts:rows.results||[],username_history:history.results||[]});
  }
- if(url.pathname==="/script"||url.pathname.startsWith("/script/")){const page=await fetch("https://raw.githubusercontent.com/"+REPO+"/main/website/script.html");if(!page.ok)return new Response("Script page source not found",{status:502});return new Response(await page.text(),{headers:{"content-type":"text/html; charset=utf-8","cache-control":"no-cache"}})}
- if(url.pathname==="/"||["/home","/explore","/upload","/settings","/profile"].includes(url.pathname)||/^\/profile\/[a-f0-9]{16}$/.test(url.pathname)){
-  const page=await fetch("https://raw.githubusercontent.com/"+REPO+"/main/website/index.html");if(!page.ok)return new Response("Website source not found",{status:502});return new Response(await page.text(),{headers:{"content-type":"text/html; charset=utf-8","cache-control":"no-cache"}});
+ if(url.pathname==="/script"||url.pathname.startsWith("/script/")||url.pathname==="/script.html"){
+  const page=await fetch("https://raw.githubusercontent.com/"+REPO+"/main/website/script.html?__fresh="+Date.now(),{headers:{"cache-control":"no-cache","user-agent":"Sieu-Sv_Library"}});
+  if(!page.ok)return new Response("Script page source not found",{status:502});
+  let html=await page.text();
+  html=html.replace(/href="index\\.html"/g,'href="'+SITE+'/"');
+  html=html.replace(/href='index\\.html'/g,"href='"+SITE+"/'");
+  return new Response(html,{headers:{"content-type":"text/html; charset=utf-8","cache-control":"no-store"}});
+ }
+ if(url.pathname==="/"||["/home","/explore","/upload","/settings","/profile"].includes(url.pathname)||/^\\/profile\\/[a-f0-9]{16}$/.test(url.pathname)){
+  const page=await fetch("https://raw.githubusercontent.com/"+REPO+"/main/website/index.html?__fresh="+Date.now(),{headers:{"cache-control":"no-cache","user-agent":"Sieu-Sv_Library"}});
+  if(!page.ok)return new Response("Website source not found",{status:502});
+  let html=await page.text();
+  html=html.replace(/PAGE_BASE\\s*=\\s*(['"])https:\\/\\/minhreal\\.github\\.io\\/SieuSV-Storage\\/\\1/g,"PAGE_BASE=APP_BASE+'/'");
+  html=html.replace(/PAGE_BASE\\s*\\+\\s*(['"])script\\.html/g,"APP_BASE+'/script");
+  html=html.replace(/https:\\/\\/minhreal\\.github\\.io\\/SieuSV-Storage\\/script\\.html/g,SITE+"/script");
+  html=html.replace(/https:\\/\\/minhreal\\.github\\.io\\/SieuSV-Storage\\//g,SITE+"/");
+  return new Response(html,{headers:{"content-type":"text/html; charset=utf-8","cache-control":"no-store"}});
  }
  return json({error:"not_found"},404)
 }

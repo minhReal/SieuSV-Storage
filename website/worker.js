@@ -154,18 +154,18 @@ async function handle(request,env){
   const page=await fetch("https://raw.githubusercontent.com/"+REPO+"/main/website/script.html?__fresh="+Date.now(),{headers:{"cache-control":"no-cache","user-agent":"Sieu-Sv_Library"}});
   if(!page.ok)return new Response("Script page source not found",{status:502});
   let html=await page.text();
-  html=html.replace(/href="index\\.html"/g,'href="'+SITE+'/"');
-  html=html.replace(/href='index\\.html'/g,"href='"+SITE+"/'");
+  html=html.split('href="index.html"').join('href="'+SITE+'/"');
+  html=html.split("href='index.html'").join("href='"+SITE+"/'");
   return new Response(html,{headers:{"content-type":"text/html; charset=utf-8","cache-control":"no-store"}});
  }
- if(url.pathname==="/"||["/home","/explore","/upload","/settings","/profile"].includes(url.pathname)||/^\\/profile\\/[a-f0-9]{16}$/.test(url.pathname)){
+ if(url.pathname==="/"||["/home","/explore","/upload","/settings","/profile"].includes(url.pathname)||(url.pathname.startsWith("/profile/")&&/^[a-f0-9]{16}$/.test(url.pathname.slice(9)))){
   const page=await fetch("https://raw.githubusercontent.com/"+REPO+"/main/website/index.html?__fresh="+Date.now(),{headers:{"cache-control":"no-cache","user-agent":"Sieu-Sv_Library"}});
   if(!page.ok)return new Response("Website source not found",{status:502});
   let html=await page.text();
-  html=html.replace(/PAGE_BASE\\s*=\\s*(['"])https:\\/\\/minhreal\\.github\\.io\\/SieuSV-Storage\\/\\1/g,"PAGE_BASE=APP_BASE+'/'");
-  html=html.replace(/PAGE_BASE\\s*\\+\\s*(['"])script\\.html/g,"APP_BASE+'/script");
-  html=html.replace(/https:\\/\\/minhreal\\.github\\.io\\/SieuSV-Storage\\/script\\.html/g,SITE+"/script");
-  html=html.replace(/https:\\/\\/minhreal\\.github\\.io\\/SieuSV-Storage\\//g,SITE+"/");
+  html=html.split("PAGE_BASE='https://minhreal.github.io/SieuSV-Storage/'").join("PAGE_BASE=APP_BASE+'/'");
+  html=html.split("PAGE_BASE+'script.html").join("APP_BASE+'/script");
+  html=html.split("https://minhreal.github.io/SieuSV-Storage/script.html").join(SITE+"/script");
+  html=html.split("https://minhreal.github.io/SieuSV-Storage/").join(SITE+"/");
   return new Response(html,{headers:{"content-type":"text/html; charset=utf-8","cache-control":"no-store"}});
  }
  return json({error:"not_found"},404)

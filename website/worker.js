@@ -142,9 +142,10 @@ async function handle(request,env){
   const user=await currentUser(request,env);if(!user)return json({error:"unauthorized"},401);
   const id=decodeURIComponent(url.pathname.slice("/api/scripts/".length));if(!id||id.length>128)return json({error:"invalid_id"},400);
   let body;try{const size=Number(request.headers.get("content-length")||0);if(size>450000)return json({error:"payload_too_large"},413);const raw=await request.text();if(raw.length>450000)return json({error:"payload_too_large"},413);body=JSON.parse(raw)}catch{return json({error:"invalid_json"},400)}
-  const title=String(body.title||"").trim().slice(0,80),description=String(body.description||"").trim().slice(0,500),category=String(body.category||"Other").trim().slice(0,40),source=String(body.source||""),thumbnail=String(body.thumbnail_url||"").trim();
+  const existing=await env.DB.prepare("SELECT upload_method,source FROM scripts WHERE id=? AND user_id=? LIMIT 1").bind(id,user.id).first();if(!existing)return json({error:"script_not_found_or_forbidden"},404);
+  const title=String(body.title||"").trim().slice(0,80),description=String(body.description||"").trim().slice(0,500),category=String(body.category||"Other").trim().slice(0,40),source=String(body.source??existing.source??""),thumbnail=String(body.thumbnail_url||"").trim();
   if(title.length<2)return json({error:"invalid_title",message:"Title must contain 2 to 80 characters."},400);
-  if(source.length<1||source.length>100000)return json({error:"invalid_source",message:"Source must be between 1 and 100000 characters."},400);
+  if(source.length>100000||(existing.upload_method!=="import"&&!source.trim()))return json({error:"invalid_source",message:"Source is required unless the upload method is Import. Maximum 100000 characters."},400);
   if(thumbnail&&thumbnail.length>250000)return json({error:"invalid_thumbnail"},400);
   if(thumbnail&&!(/^https:\/\//i.test(thumbnail)&&thumbnail.length<=1000)&&!/^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/.test(thumbnail))return json({error:"invalid_thumbnail"},400);
   try{const result=await env.DB.prepare("UPDATE scripts SET title=?,description=?,category=?,source=?,thumbnail_url=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND user_id=?").bind(title,description,category,source,thumbnail||null,id,user.id).run();if(!result.meta?.changes)return json({error:"script_not_found_or_forbidden"},404);return json({ok:true,id})}catch{return json({error:"database_error"},500)}

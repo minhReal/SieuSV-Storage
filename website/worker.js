@@ -141,14 +141,22 @@ async function handle(request,env){
  if(url.pathname.startsWith("/api/scripts/")&&request.method==="PUT"){
   const user=await currentUser(request,env);if(!user)return json({error:"unauthorized"},401);
   const id=decodeURIComponent(url.pathname.slice("/api/scripts/".length));if(!id||id.length>128)return json({error:"invalid_id"},400);
-  let body;try{const size=Number(request.headers.get("content-length")||0);if(size>450000)return json({error:"payload_too_large"},413);const raw=await request.text();if(raw.length>450000)return json({error:"payload_too_large"},413);body=JSON.parse(raw)}catch{return json({error:"invalid_json"},400)}
-  const existing=await env.DB.prepare("SELECT upload_method,source FROM scripts WHERE id=? AND user_id=? LIMIT 1").bind(id,user.id).first();if(!existing)return json({error:"script_not_found_or_forbidden"},404);
-  const title=String(body.title||"").trim().slice(0,80),description=String(body.description||"").trim().slice(0,500),category=String(body.category||"Other").trim().slice(0,40),source=String(body.source??existing.source??""),thumbnail=String(body.thumbnail_url||"").trim();
+  let body;try{const size=Number(request.headers.get("content-length")||0);if(size>700000)return json({error:"payload_too_large"},413);const raw=await request.text();if(raw.length>700000)return json({error:"payload_too_large"},413);body=JSON.parse(raw)}catch{return json({error:"invalid_json"},400)}
+  const existing=await env.DB.prepare("SELECT upload_method,source,thumbnail_url,import_parts FROM scripts WHERE id=? AND user_id=? LIMIT 1").bind(id,user.id).first();if(!existing)return json({error:"script_not_found_or_forbidden"},404);
+  const title=String(body.title||"").trim().slice(0,80),description=String(body.description||"").trim().slice(0,500),category=String(body.category||"Other").trim().slice(0,40),uploadMethod=String(body.upload_method??existing.upload_method??"source"),source=String(body.source??existing.source??"");
+  let importParts=body.import_parts;
+  if(importParts===undefined){try{importParts=JSON.parse(existing.import_parts||"[]")}catch{importParts=[]}}
+  if(!Array.isArray(importParts))return json({error:"invalid_import_parts"},400);
+  if(!["source","import","both"].includes(uploadMethod))return json({error:"invalid_upload_method"},400);
+  if(importParts.length>20||importParts.some(x=>typeof x!=="string"||!x.trim()||x.length>25000)||importParts.reduce((n,x)=>n+x.length,0)>200000)return json({error:"invalid_import_parts",message:"Import requires 1-20 non-empty parts, up to 25,000 characters each and 200,000 characters total."},400);
   if(title.length<2)return json({error:"invalid_title",message:"Title must contain 2 to 80 characters."},400);
-  if(source.length>100000||(existing.upload_method!=="import"&&!source.trim()))return json({error:"invalid_source",message:"Source is required unless the upload method is Import. Maximum 100000 characters."},400);
+  if(source.length>100000||(["source","both"].includes(uploadMethod)&&!source.trim()))return json({error:"invalid_source",message:"Source is required for Source and Both methods, up to 100000 characters."},400);
+  if(uploadMethod==="import"||uploadMethod==="both"){if(!importParts.length)return json({error:"invalid_import_parts",message:"Add at least one String Import Part."},400)}else importParts=[];
+  let thumbnail=existing.thumbnail_url||"";
+  if(Object.prototype.hasOwnProperty.call(body,"thumbnail_url")&&body.thumbnail_url!==null)thumbnail=String(body.thumbnail_url||"").trim();
   if(thumbnail&&thumbnail.length>250000)return json({error:"invalid_thumbnail"},400);
   if(thumbnail&&!(/^https:\/\//i.test(thumbnail)&&thumbnail.length<=1000)&&!/^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/.test(thumbnail))return json({error:"invalid_thumbnail"},400);
-  try{const result=await env.DB.prepare("UPDATE scripts SET title=?,description=?,category=?,source=?,thumbnail_url=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND user_id=?").bind(title,description,category,source,thumbnail||null,id,user.id).run();if(!result.meta?.changes)return json({error:"script_not_found_or_forbidden"},404);return json({ok:true,id})}catch{return json({error:"database_error"},500)}
+  try{const result=await env.DB.prepare("UPDATE scripts SET title=?,description=?,category=?,source=?,thumbnail_url=?,upload_method=?,import_parts=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND user_id=?").bind(title,description,category,source,thumbnail||null,uploadMethod,JSON.stringify(importParts),id,user.id).run();if(!result.meta?.changes)return json({error:"script_not_found_or_forbidden"},404);return json({ok:true,id,upload_method:uploadMethod,import_parts:importParts})}catch{return json({error:"database_error"},500)}
  }
  if(url.pathname.startsWith("/api/profile/")&&request.method==="GET"){
   const publicId=decodeURIComponent(url.pathname.slice("/api/profile/".length));if(!/^[a-f0-9]{16}$/.test(publicId))return json({error:"profile_not_found"},404);

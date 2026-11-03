@@ -63,6 +63,7 @@ async function githubIndex(request){
   if(!sourcePath)return;
   if(!listed.some(x=>x.path===sourcePath))listed.unshift({path:sourcePath,role:"main"});
   const importParts=(Array.isArray(manifest.import_parts)?manifest.import_parts:[]).filter(safeManifestPath).filter(x=>treeFiles.has(folder+"/"+x));
+  for(const rel of importParts)if(!listed.some(x=>x.path===rel))listed.push({path:rel,role:"import_part"});
   const fallback=manifestPath.slice(0,manifestPath.lastIndexOf("/")).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
   const id=String(manifest.id||fallback).slice(0,100);
   if(!/^[a-z0-9][a-z0-9-]*$/.test(id))return;

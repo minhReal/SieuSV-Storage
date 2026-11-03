@@ -55,7 +55,7 @@ async function githubFile(path,request){
 
 function githubUser(user){return user?{login:String(user.login||"unknown"),avatar_url:user.avatar_url||null,html_url:user.html_url||null}:null}
 async function githubApi(value){try{const url=new URL(value);if(url.protocol!=="https:"||url.hostname!=="api.github.com"||!url.pathname.startsWith("/repos/"+REPO+"/"))return null;const r=await fetch(url.toString(),{headers:{"accept":"application/vnd.github+json","user-agent":"Sieu-Sv_Library"},cf:{cacheTtl:300,cacheEverything:true}});if(!r.ok)return null;const length=Number(r.headers.get("content-length")||0);if(length>5000000)return null;const raw=await r.text();if(raw.length>5000000)return null;return JSON.parse(raw)}catch{return null}}
-function safeManifestPath(value){return typeof value==="string"&&value.length>0&&value.length<300&&!value.startsWith("/")&&!value.includes("\\")&&!/[?#\\u0000-\\u001f\\u007f]/.test(value)&&!value.split("/").some(p=>!p||p==="."||p==="..")}
+function safeManifestPath(value){return typeof value==="string"&&value.length>0&&value.length<300&&!value.startsWith("/")&&!value.includes("\\")&&!/[?#]/.test(value)&&![...value].some(c=>{const n=c.charCodeAt(0);return n<32||n===127})&&!value.split("/").some(p=>!p||p==="."||p==="..")}
 async function githubIndex(request){
  const key=new Request(new URL("/__github_manifest_index_v2",request.url)),cache=caches.default;
  try{const cached=await cache.match(key);if(cached)return await cached.json()}catch{}

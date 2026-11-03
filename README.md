@@ -32,7 +32,7 @@ Browse, inspect, copy or fork the source files here. The ready-to-use model is a
 | **Weld** | Select parts and create local welds and supported constraints while preserving positions. *(WIP.)* | [Folder](<Studio Tools/Weld>) |
 | **Grip Editor** | Edit a Tool's `Grip` with Move / Rotate handles and snap settings. Playtest only. | [Folder](<Studio Tools/Grip Editor>) |
 | **Export-Import Plugin** | Export and import plugin instances as code strings. Includes EN/VN guides. | [Folder](<Studio Tools/Export-Import Plugin>) |
-| **Open Chat** | A SIEUSV plugin that toggles the Roblox chat interface. | [Folder](<Sieu-SV Plugins/Open Chat>) |
+| **Open Chat** | A SIEUSV plugin that toggles the Roblox chat interface. Its website tag is `Github`. | [Folder](<Sieu-SV Plugins/Open Chat>) |
 | **Automatic Button Arrangement** | Automatically arranges buttons in a scrolling grid. | [Folder](<Other/Automatic Button Arrangement>) |
 | **Automatically Add UIStroke** | Adds outlines to TextButtons and ImageButtons. | [Folder](<Other/Automatically Add UIStroke>) |
 | **Draggable** | Adds touch and mouse dragging to supported plugin panels. | [Folder](<Other/Draggable>) |
@@ -59,7 +59,7 @@ There are two ways to submit a script to SieuSV-Storage.
 4. Add the Luau source files and any supporting documentation to the same folder.
 5. Open a Pull Request against `main`. Include a short summary and note any playtest or platform limitations.
 
-After a Pull Request is merged, the website reads its manifest and GitHub history. The file tree displays script files. The Information panel shows the custom tag, category, upload method, repository path, PR history and GitHub contributor profile.
+After a Pull Request is merged, the website reads its manifest and GitHub history. The script page displays a thumbnail, description and source code directly. The Information panel shows the custom tag, category, upload method, repository path, contributor profiles and collapsed PR history.
 
 #### SVS.json format
 
@@ -71,7 +71,7 @@ Manifest paths are relative to the folder containing the JSON file. Use valid JS
   "id": "my-script",
   "title": "My Script",
   "description": "What the script does.",
-  "category": "Other",
+  "category": "Plugins",
   "tag": "Github",
   "method": "source",
   "source": "Main.lua",
@@ -85,11 +85,11 @@ Manifest paths are relative to the folder containing the JSON file. Use valid JS
 ```
 
 - `id`: unique, lowercase identifier.
-- `title`, `description`, `category`: information shown in the library.
-- `tag`: a custom display tag. Defaults to `Github` when omitted; use `Sieu-SV Plugin` for an official SIEUSV plugin.
+- `title`, `description`, `category`: information shown in the library. Use `Plugins` for plugins and `Other` for utility scripts.
+- `tag`: a custom display tag. Defaults to `Github` when omitted. All current repository scripts, including Open Chat, use `Github`.
 - `method`: `source`, `import` or `both`.
 - `source`: relative path to the main `.lua` or `.luau` file when using `source` or `both`.
-- `files`: files displayed in the Explorer. Each path is relative to the manifest folder. Use roles such as `main`, `helper`, `documentation` or `button`.
+- `files`: source and supporting files associated with the script. Each path is relative to the manifest folder. Use roles such as `main`, `helper`, `documentation` or `button`.
 - `import_parts`: relative paths to String Import part files when using `import` or `both`.
 - `thumbnail`: optional relative image path; use `null` when there is no thumbnail.
 
@@ -188,9 +188,9 @@ Một số công cụ chỉ hoạt động trong playtest.
 4. Thêm mã nguồn Luau và tài liệu liên quan vào cùng thư mục.
 5. Tạo Pull Request hướng đến branch `main`, kèm mô tả ngắn và các giới hạn cần biết.
 
-Sau khi PR được merge, website đọc manifest và lịch sử GitHub. Explorer hiển thị cây file, mô tả, danh mục, phương thức tải, link PR và hồ sơ contributor.
+Sau khi PR được merge, website đọc manifest và lịch sử GitHub. Trang script hiển thị thumbnail, mô tả và source code trực tiếp. Phần Information hiển thị tag, danh mục, phương thức tải, đường dẫn repository, contributor và lịch sử PR được thu gọn.
 
-Manifest hỗ trợ các trường `id`, `title`, `description`, `category`, `tag`, `method`, `source`, `files`, `import_parts` và `thumbnail`. Tag mặc định là `Github`; có thể tùy chỉnh theo loại plugin. Đường dẫn trong manifest tính từ thư mục chứa file JSON.
+Manifest hỗ trợ các trường `id`, `title`, `description`, `category`, `tag`, `method`, `source`, `files`, `import_parts` và `thumbnail`. Dùng category `Plugins` cho plugin và `Other` cho tiện ích. Tag mặc định là `Github`, kể cả Open Chat. Đường dẫn trong manifest tính từ thư mục chứa file JSON.
 
 **Cách 2 — Website**
 

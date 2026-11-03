@@ -3,7 +3,7 @@
   "id": "advanced-explorer",
   "title": "Advanced Explorer",
   "description": "An in-game Explorer and Properties interface for inspecting instances during playtesting.",
-  "category": "Studio Tools",
+  "category": "Plugins",
   "method": "source",
   "source": "Advanced Explorer.lua",
   "files": [

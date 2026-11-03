@@ -57,9 +57,9 @@ function githubUser(user){return user?{login:String(user.login||"unknown"),avata
 async function githubApi(value){try{const url=new URL(value);if(url.protocol!=="https:"||url.hostname!=="api.github.com"||!url.pathname.startsWith("/repos/"+REPO+"/"))return null;const r=await fetch(url.toString(),{headers:{"accept":"application/vnd.github+json","user-agent":"Sieu-Sv_Library"},cf:{cacheTtl:300,cacheEverything:true}});if(!r.ok)return null;const length=Number(r.headers.get("content-length")||0);if(length>5000000)return null;const raw=await r.text();if(raw.length>5000000)return null;return JSON.parse(raw)}catch{return null}}
 function safeManifestPath(value){return typeof value==="string"&&value.length>0&&value.length<300&&!value.startsWith("/")&&!value.includes("\\")&&!/[?#]/.test(value)&&![...value].some(c=>{const n=c.charCodeAt(0);return n<32||n===127})&&!value.split("/").some(p=>!p||p==="."||p==="..")}
 async function githubIndex(request){
- const key=new Request(new URL("/__github_manifest_index_v3",request.url)),cache=caches.default;
+ const key=new Request(new URL("/__github_manifest_index_v4",request.url)),cache=caches.default;
  try{const cached=await cache.match(key);if(cached)return await cached.json()}catch{}
- const tree=await githubApi("https://api.github.com/repos/"+REPO+"/git/trees/main?recursive=1&svs=3");
+ const tree=await githubApi("https://api.github.com/repos/"+REPO+"/git/trees/main?recursive=1&svs=4");
  if(!tree||!Array.isArray(tree.tree)||tree.truncated)throw new Error("github_tree_unavailable");
  const treeFiles=new Set(tree.tree.filter(x=>x.type==="blob").map(x=>x.path));
  const manifestPaths=tree.tree.filter(x=>x.type==="blob"&&(x.path.split("/").pop()==="SVS.json"||x.path.split("/").pop()==="svs.json")).map(x=>x.path),records=[];
@@ -85,7 +85,7 @@ async function githubIndex(request){
   if(!/^[a-z0-9][a-z0-9-]*$/.test(id))return;
   const method=["source","import","both"].includes(manifest.method)?manifest.method:"source";
   const thumb=safeManifestPath(manifest.thumbnail)&&treeFiles.has(folder+"/"+manifest.thumbnail)?"https://raw.githubusercontent.com/"+REPO+"/main/"+(folder+"/"+manifest.thumbnail).split("/").map(encodeURIComponent).join("/") : null;
-  records.push({id,folder,manifestPath,manifest:{...manifest},title:String(manifest.title||id).slice(0,100),description:String(manifest.description||"").slice(0,1000),category:(String(manifest.category||"Other").trim()==="Studio Tools"?"Plugins":String(manifest.category||"Other")).slice(0,60),tag:String(typeof manifest.tag==="string"&&manifest.tag.trim()?manifest.tag.trim():"Github").slice(0,48),method,source:sourcePath,files:listed,importParts,thumbnail_url:thumb||"https://raw.githubusercontent.com/"+REPO+"/main/logo.jpg",repo_url:"https://github.com/"+REPO+"/tree/main/"+folder.split("/").map(encodeURIComponent).join("/")});
+  records.push({id,folder,manifestPath,manifest:{...manifest},title:String(manifest.title||id).slice(0,100),description:String(manifest.description||"").slice(0,1000),category:(String(manifest.category||"Other").trim()==="Studio Tools"?"Plugins":String(manifest.category||"Other")).slice(0,60),tag:String(typeof manifest.tag==="string"&&manifest.tag.trim()?manifest.tag.trim():"Github").slice(0,48),method,source:sourcePath,files:listed,importParts,thumbnail_url:thumb||"https://raw.githubusercontent.com/"+REPO+"/main/thumDefault.jpg",repo_url:"https://github.com/"+REPO+"/tree/main/"+folder.split("/").map(encodeURIComponent).join("/")});
  }));
  records.sort((a,b)=>a.category.localeCompare(b.category)||a.title.localeCompare(b.title));
  const prs=await githubApi("https://api.github.com/repos/"+REPO+"/pulls?state=closed&per_page=100&sort=updated&direction=desc")||[],merged=prs.filter(p=>p.merged_at&&p.user).slice(0,20),contributions={};

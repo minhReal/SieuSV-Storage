@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": "automatic-button-arrangement",
+  "title": "Automatic Button Arrangement",
+  "description": "Automatically sizes and arranges TextButtons inside a scrolling frame using a two-column grid layout.",
+  "category": "Utilities",
+  "method": "source",
+  "source": "AutomaticButtonArrangement.lua",
+  "files": [
+    {
+      "path": "AutomaticButtonArrangement.lua",
+      "role": "main"
+    }
+  ],
+  "import_parts": [],
+  "thumbnail": null
+}

@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": "weld",
+  "title": "Weld",
+  "description": "Select parts and create local welds, weld constraints, snaps, attachments and supported constraints while preserving positions. Work in progress.",
+  "category": "Studio Tools",
+  "method": "source",
+  "source": "Weld.lua",
+  "files": [
+    {
+      "path": "Weld.lua",
+      "role": "main"
+    }
+  ],
+  "import_parts": [],
+  "thumbnail": null
+}

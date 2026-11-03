@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "id": "grip-editor",
+  "title": "Grip Editor",
+  "description": "Edit a Tool's Grip using Move and Rotate handles with configurable snap settings. Playtest only.",
+  "category": "Studio Tools",
+  "method": "source",
+  "source": "GripEditor.lua",
+  "files": [
+    {
+      "path": "GripEditor.lua",
+      "role": "main"
+    },
+    {
+      "path": "Grip Editor Btn.lua",
+      "role": "button"
+    }
+  ],
+  "import_parts": [],
+  "thumbnail": null
+}

@@ -4,7 +4,7 @@
 
 # SieuSV-Storage
 
-**Storage to hold plugin scripts for [SIEUSV plugins](https://create.roblox.com/store/asset/124980373269733/SIEUSV-plugins-BETA)**
+**Source repository for [SIEUSV plugins](https://create.roblox.com/store/asset/124980373269733/SIEUSV-plugins-BETA)**
 
 [![Roblox](https://img.shields.io/badge/Roblox-Luau-00A2FF?logo=roblox&logoColor=white)](https://create.roblox.com/store/asset/124980373269733/SIEUSV-plugins-BETA)
 [![License](https://img.shields.io/badge/License-SAL--1.0-blue)](LICENSE.md)
@@ -19,48 +19,106 @@ English · [Tiếng Việt](#tiếng-việt)
 
 ## About
 
-**SieuSV-Storage** is the source repository for the scripts behind **SIEUSV plugins** - Plugins make building your game in Studio Lite easier!
+**SieuSV-Storage** stores the Luau source files and metadata for **SIEUSV plugins**. The plugins are designed to make building and testing Roblox experiences in Studio Lite easier, including on mobile.
 
-
-Browse, read, copy or fork the scripts here. The ready-to-use model is on the [Roblox Creator Store](https://create.roblox.com/store/asset/124980373269733/SIEUSV-plugins-BETA).
+Browse, inspect, copy or fork the source files here. The ready-to-use model is available on the [Roblox Creator Store](https://create.roblox.com/store/asset/124980373269733/SIEUSV-plugins-BETA).
 
 ## Plugins
 
-| Plugin | Description | File |
+| Plugin | Description | Files |
 | --- | --- | --- |
-| **Weld** | Tap parts to select them (highlighted & numbered), then disable to create local **Weld / WeldConstraint / Snap / Attachment / SpringConstraint / HingeConstraint** while keeping positions. *(Known bugs — WIP.)* | [`Weld.lua`](Weld.lua) |
-| **Surface Preview** | Shows the **X / Y / Z** axes and surfaces of any part you select. | [`Surface Preview.lua`](<Surface Preview.lua>) |
-| **Grip Editor** | Edit a Tool's `Grip` with **Move / Rotate** handles and snap settings. Playtest only. | [`Grip-Editor/`](Grip-Editor) |
-| **Export-Import Plugin** | Export/import plugins as code strings — no computer needed. Includes a how-to guide (EN/VN). | [`Export-Import-Plugin/`](Export-Import-Plugin) |
-| **Open Chat** | Toggle the Roblox chat from anywhere. | [`Open Chat.lua`](<Open Chat.lua>) |
-| **Other** | Scripts that support the main plugin | [`Other/AutomaticButtonArrangement.lua`](Other/AutomaticButtonArrangement.lua) |
+| **Advanced Explorer** | In-game Explorer and Properties interface for playtesting. | [Folder](<Studio Tools/Advanced Explorer>) |
+| **Surface Preview** | Displays the X / Y / Z axes and surfaces of a selected part. | [Folder](<Studio Tools/Surface Preview>) |
+| **Weld** | Select parts and create local welds and supported constraints while preserving positions. *(WIP.)* | [Folder](<Studio Tools/Weld>) |
+| **Grip Editor** | Edit a Tool's `Grip` with Move / Rotate handles and snap settings. Playtest only. | [Folder](<Studio Tools/Grip Editor>) |
+| **Export-Import Plugin** | Export and import plugin instances as code strings. Includes EN/VN guides. | [Folder](<Studio Tools/Export-Import Plugin>) |
+| **Open Chat** | Toggle the Roblox chat interface. | [Folder](<Utilities/Open Chat>) |
+| **Automatic Button Arrangement** | Automatically arranges buttons in a scrolling grid. | [Folder](<Utilities/Automatic Button Arrangement>) |
+| **Automatically Add UIStroke** | Adds outlines to TextButtons and ImageButtons. | [Folder](<Utilities/Automatically Add UIStroke>) |
+| **Draggable** | Adds touch and mouse dragging to supported plugin panels. | [Folder](<Utilities/Draggable>) |
 
 ## How to use
 
-1. Copy assetid from the [Creator Store](https://create.roblox.com/store/asset/124980373269733/SIEUSV-plugins-BETA).
-2. Join Studio Lite.
-3. Paste it into the Toolbox and then click Get.
-4. Select Plugins. (find it in the Workspace)
-6. Go to StarterPlayer>StarterCharaterScripts.
-7. Just paste plugins and you're done!
+1. Get the asset ID from the [Roblox Creator Store](https://create.roblox.com/store/asset/124980373269733/SIEUSV-plugins-BETA).
+2. Join a Studio Lite playtest.
+3. Open Toolbox, paste the asset ID and select **Get**.
+4. Find the **Plugins** folder in Workspace.
+5. Follow the plugin's guide and place the required scripts in the specified location, usually `StarterPlayer > StarterCharacterScripts`.
 
-> Making your own plugin button? I'll create some template scripts soon. lel.
+Some tools are designed for playtesting only. Check each plugin's folder and README before installing it.
 
-## Structure
+## Pull Request or Website
+
+There are two ways to submit a script to SieuSV-Storage.
+
+### Option 1 — Pull Request (GitHub)
+
+1. Fork this repository and create a branch.
+2. Put each plugin or standalone script in its own folder under an appropriate category, such as `Studio Tools/` or `Utilities/`.
+3. Add a **`SVS.json`** file (or **`svs.json`**) at the root of that script folder.
+4. Add the Luau source files and any supporting documentation to the same folder.
+5. Open a Pull Request against `main`. Include a short summary and note any playtest or platform limitations.
+
+After a Pull Request is merged, the website reads its manifest and GitHub history. The Explorer view displays the script's files, description, category, upload method, PR link, and GitHub contributor profile.
+
+#### SVS.json format
+
+Manifest paths are relative to the folder containing the JSON file. Use valid JSON (double quotes, no trailing commas).
+
+```json
+{
+  "schema_version": 1,
+  "id": "my-script",
+  "title": "My Script",
+  "description": "What the script does.",
+  "category": "Utilities",
+  "method": "source",
+  "source": "Main.lua",
+  "files": [
+    { "path": "Main.lua", "role": "main" },
+    { "path": "Helper.lua", "role": "helper" }
+  ],
+  "import_parts": [],
+  "thumbnail": null
+}
+```
+
+- `id`: unique, lowercase identifier.
+- `title`, `description`, `category`: information shown in the library.
+- `method`: `source`, `import` or `both`.
+- `source`: relative path to the main `.lua` or `.luau` file when using `source` or `both`.
+- `files`: files displayed in the Explorer. Each path is relative to the manifest folder. Use roles such as `main`, `helper`, `documentation` or `button`.
+- `import_parts`: relative paths to String Import part files when using `import` or `both`.
+- `thumbnail`: optional relative image path; use `null` when there is no thumbnail.
+
+The website accepts either exact filename `SVS.json` or `svs.json`. Keep credentials, private URLs and personal information out of manifests and source files. Do not submit code you do not own or have permission to share.
+
+### Option 2 — Website
+
+Use the **Upload** page on the [SieuSV Library website](https://minhreal.github.io/SieuSV-Storage/) to submit a community script. Sign in, add its title and description, choose **Source**, **Import** or **Both**, then publish. Website submissions are stored in the community library and do not need a GitHub folder or manifest.
+
+## Repository structure
 
 ```text
 SieuSV-Storage/
-├── Open Chat.lua
-├── Surface Preview.lua
-├── Weld.lua
-├── Grip-Editor/
-│   ├── GripEditor.lua
-│   └── Grip Editor Btn.lua
-├── Export-Import-Plugin/
-│   ├── EI Btn.lua
-│   ├── EN_HOW_TO_USE_THIS_PLUGINS.md
-│   └── VN_HOW_TO_USE_THIS_PLUGINS.md
-├── Other/
+├── Studio Tools/
+│   ├── Advanced Explorer/
+│   │   ├── SVS.json
+│   │   └── Advanced Explorer.lua
+│   ├── Export-Import Plugin/
+│   │   ├── SVS.json
+│   │   ├── EI-Source.lua
+│   │   ├── EI-Btn.lua
+│   │   └── guides and README
+│   ├── Grip Editor/
+│   ├── Surface Preview/
+│   └── Weld/
+├── Utilities/
+│   ├── Open Chat/
+│   ├── Automatic Button Arrangement/
+│   ├── Automatically Add UIStroke/
+│   └── Draggable/
+├── website/
 ├── LICENSE.md
 └── README.md
 ```
@@ -72,6 +130,7 @@ Found a bug or want to add a plugin? Open an **Issue** or a **Pull Request**. In
 ## License
 
 Licensed under the **SIEUSV Attribution License 1.0 (SAL-1.0)** — see [`LICENSE.md`](LICENSE.md).
+
 You may use, modify and commercialize derivatives, but you **must credit the original authors** and link back to this project.
 
 ## Credits
@@ -88,31 +147,54 @@ You may use, modify and commercialize derivatives, but you **must credit the ori
 
 ### Giới thiệu
 
-**SieuSV-Storage** là kho lưu trữ các script của **SIEUSV plugins** - Bộ tool giúp làm game trở nên dễ hơn!
+**SieuSV-Storage** là kho lưu trữ mã nguồn Luau và metadata của **SIEUSV plugins**, hỗ trợ tạo và kiểm thử game Roblox bằng Studio Lite, kể cả trên điện thoại.
 
-Model hoàn chỉnh có trên [Roblox Creator Store](https://create.roblox.com/store/asset/124980373269733/SIEUSV-plugins-BETA).
+Bạn có thể xem, đọc, sao chép hoặc fork mã nguồn tại đây. Model hoàn chỉnh có trên [Roblox Creator Store](https://create.roblox.com/store/asset/124980373269733/SIEUSV-plugins-BETA).
 
 ### Danh sách plugin
 
 | Plugin | Chức năng |
 | --- | --- |
-| **Weld** | Chọn các part rồi tắt plugin để tạo weld/constraint cục bộ, giữ nguyên vị trí. *(Còn lỗi.)* |
-| **Surface Preview** | Xem các mặt/trục X, Y, Z của part. |
-| **Grip Editor** | Chỉnh `Grip` của Tool bằng Move/Rotate. Chỉ dùng khi playtest. |
-| **Export-Import Plugin** | Xuất/nhập plugin bằng chuỗi code, không cần PC. |
-| **Open Chat** | Mở chat ở mọi nơi. |
-| **Other** | Script phụ trợ. |
+| **Advanced Explorer** | Explorer và Properties trong lúc playtest. |
+| **Surface Preview** | Hiển thị trục X / Y / Z và bề mặt của part. |
+| **Weld** | Tạo weld và constraint cục bộ, giữ nguyên vị trí. *(Đang phát triển.)* |
+| **Grip Editor** | Chỉnh `Grip` của Tool bằng Move / Rotate. Chỉ dùng khi playtest. |
+| **Export-Import Plugin** | Xuất và nhập plugin bằng chuỗi code, có hướng dẫn EN/VN. |
+| **Open Chat** | Bật / tắt giao diện chat Roblox. |
+| **Automatic Button Arrangement** | Tự động sắp xếp button trong scrolling grid. |
+| **Automatically Add UIStroke** | Tự thêm viền cho TextButton và ImageButton. |
+| **Draggable** | Kéo thả các panel plugin bằng cảm ứng hoặc chuột. |
 
 ### Cách dùng
 
-1. Lấy assetid của model từ [Creator Store](https://create.roblox.com/store/asset/124980373269733/SIEUSV-plugins-BETA).
-2. Dán vào ToolBox rồi bấm Get
-3. Tìm và chọn **Plugins** (trong Workspace)
-4. Tìm StarterPlayer>StarterCharaterScripts
-5. Dán **Plugins** vào, xong!
+1. Lấy asset ID từ [Roblox Creator Store](https://create.roblox.com/store/asset/124980373269733/SIEUSV-plugins-BETA).
+2. Vào playtest trong Studio Lite.
+3. Mở Toolbox, dán asset ID rồi chọn **Get**.
+4. Tìm thư mục **Plugins** trong Workspace.
+5. Đọc hướng dẫn của từng plugin và đặt script vào đúng vị trí, thường là `StarterPlayer > StarterCharacterScripts`.
+
+Một số công cụ chỉ hoạt động trong playtest.
+
+### Pull Request hoặc Website
+
+**Cách 1 — GitHub Pull Request**
+
+1. Fork repository và tạo branch riêng.
+2. Đặt mỗi plugin hoặc script độc lập trong một thư mục thuộc nhóm phù hợp, ví dụ `Studio Tools/` hoặc `Utilities/`.
+3. Thêm file **`SVS.json`** (hoặc **`svs.json`**) ở thư mục gốc của script đó.
+4. Thêm mã nguồn Luau và tài liệu liên quan vào cùng thư mục.
+5. Tạo Pull Request hướng đến branch `main`, kèm mô tả ngắn và các giới hạn cần biết.
+
+Sau khi PR được merge, website đọc manifest và lịch sử GitHub. Explorer hiển thị cây file, mô tả, danh mục, phương thức tải, link PR và hồ sơ contributor.
+
+Manifest hỗ trợ các trường `id`, `title`, `description`, `category`, `method`, `source`, `files`, `import_parts` và `thumbnail`. Đường dẫn trong manifest tính từ thư mục chứa file JSON.
+
+**Cách 2 — Website**
+
+Mở trang [SieuSV Library](https://minhreal.github.io/SieuSV-Storage/), đăng nhập rồi dùng mục **Upload**. Chọn **Source**, **Import** hoặc **Both**, điền thông tin và đăng tải. Không cần tự tạo manifest khi upload qua website.
 
 ### Giấy phép
 
-Theo **SIEUSV Attribution License 1.0 (SAL-1.0)** — xem [`LICENSE.md`](LICENSE.md). Bạn phải **ghi công tác giả gốc** và dẫn link về dự án này.
+Theo **SIEUSV Attribution License 1.0 (SAL-1.0)** — xem [`LICENSE.md`](LICENSE.md). Bạn phải ghi công tác giả gốc và dẫn link về dự án.
 
 </details>

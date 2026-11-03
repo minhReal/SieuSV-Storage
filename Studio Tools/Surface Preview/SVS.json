@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": "surface-preview",
+  "title": "Surface Preview",
+  "description": "Displays the X, Y and Z axes and surface information for a selected part.",
+  "category": "Studio Tools",
+  "method": "source",
+  "source": "Surface Preview.lua",
+  "files": [
+    {
+      "path": "Surface Preview.lua",
+      "role": "main"
+    }
+  ],
+  "import_parts": [],
+  "thumbnail": null
+}

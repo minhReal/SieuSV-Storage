@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "id": "export-import-plugin",
+  "title": "Export-Import Plugin",
+  "description": "Export and import plugin instances as code strings, including multiple String Import parts, directly from a mobile device.",
+  "category": "Studio Tools",
+  "method": "source",
+  "source": "EI-Source.lua",
+  "files": [
+    {
+      "path": "EI-Source.lua",
+      "role": "main"
+    },
+    {
+      "path": "EI-Btn.lua",
+      "role": "button"
+    },
+    {
+      "path": "README.md",
+      "role": "documentation"
+    },
+    {
+      "path": "[EN] HOW TO USE THIS PLUGIN.md",
+      "role": "documentation"
+    },
+    {
+      "path": "[VN] HOW TO USE THIS PLUGIN.md",
+      "role": "documentation"
+    }
+  ],
+  "import_parts": [],
+  "thumbnail": null
+}

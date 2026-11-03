@@ -37,6 +37,56 @@ async function githubFile(path,request){
   return {status:503,source:null};
  }
 }
+
+function githubUser(user){return user?{login:String(user.login||"unknown"),avatar_url:user.avatar_url||null,html_url:user.html_url||null}:null}
+async function githubApi(url){try{const r=await fetch(url,{headers:{"accept":"application/vnd.github+json","user-agent":"Sieu-Sv_Library"},cf:{cacheTtl:300,cacheEverything:true}});if(!r.ok)return null;return await r.json()}catch{return null}}
+function safeManifestPath(value){return typeof value==="string"&&value.length>0&&value.length<300&&!value.startsWith("/")&&!value.includes("\\")&&!value.split("/").some(p=>!p||p==="."||p==="..")}
+async function githubIndex(request){
+ const key=new Request(new URL("/__github_manifest_index_v1",request.url)),cache=caches.default;
+ try{const cached=await cache.match(key);if(cached)return await cached.json()}catch{}
+ const tree=await githubApi("https://api.github.com/repos/"+REPO+"/git/trees/main?recursive=1");
+ if(!tree||!Array.isArray(tree.tree))throw new Error("github_tree_unavailable");
+ const treeFiles=new Set(tree.tree.filter(x=>x.type==="blob").map(x=>x.path));
+ const manifestPaths=tree.tree.filter(x=>x.type==="blob"&&(x.path.split("/").pop()==="SVS.json"||x.path.split("/").pop()==="svs.json")).map(x=>x.path),records=[];
+ await Promise.all(manifestPaths.map(async manifestPath=>{
+  const folder=manifestPath.slice(0,manifestPath.lastIndexOf("/")),raw=await githubFile(manifestPath,request);
+  if(!raw.source)return;
+  let manifest;try{manifest=JSON.parse(raw.source)}catch{return}
+  if(!manifest||typeof manifest!=="object"||Array.isArray(manifest))return;
+  const listed=[];
+  for(const entry of Array.isArray(manifest.files)?manifest.files:[]){
+   const rel=typeof entry==="string"?entry:entry?.path;
+   if(!safeManifestPath(rel)||!treeFiles.has(folder+"/"+rel))continue;
+   if(!listed.some(x=>x.path===rel))listed.push({path:rel,role:typeof entry==="object"&&typeof entry.role==="string"?entry.role:"file"});
+  }
+  const sourcePath=safeManifestPath(manifest.source)&&treeFiles.has(folder+"/"+manifest.source)?manifest.source:(listed.find(x=>/\.(lua|luau)$/i.test(x.path))?.path||"");
+  if(!sourcePath)return;
+  if(!listed.some(x=>x.path===sourcePath))listed.unshift({path:sourcePath,role:"main"});
+  const importParts=(Array.isArray(manifest.import_parts)?manifest.import_parts:[]).filter(safeManifestPath).filter(x=>treeFiles.has(folder+"/"+x));
+  const fallback=manifestPath.slice(0,manifestPath.lastIndexOf("/")).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
+  const id=String(manifest.id||fallback).slice(0,100);
+  if(!/^[a-z0-9][a-z0-9-]*$/.test(id))return;
+  const method=["source","import","both"].includes(manifest.method)?manifest.method:"source";
+  const thumb=safeManifestPath(manifest.thumbnail)&&treeFiles.has(folder+"/"+manifest.thumbnail)?"https://raw.githubusercontent.com/"+REPO+"/main/"+(folder+"/"+manifest.thumbnail).split("/").map(encodeURIComponent).join("/") : null;
+  records.push({id,folder,manifestPath,manifest:{...manifest},title:String(manifest.title||id).slice(0,100),description:String(manifest.description||"").slice(0,1000),category:String(manifest.category||"Other").slice(0,60),method,source:sourcePath,files:listed,importParts,thumbnail_url:thumb});
+ }));
+ records.sort((a,b)=>a.category.localeCompare(b.category)||a.title.localeCompare(b.title));
+ const prs=await githubApi("https://api.github.com/repos/"+REPO+"/pulls?state=closed&per_page=100&sort=updated&direction=desc")||[],merged=prs.filter(p=>p.merged_at&&p.user).slice(0,20),contributions={};
+ await Promise.all(merged.map(async pr=>{
+  const changed=await githubApi(pr.url+"/files?per_page=100");if(!Array.isArray(changed))return;const touched=new Set();
+  for(const file of changed){if(!file||typeof file.filename!=="string")continue;for(const record of records)if(file.filename===record.folder||file.filename.startsWith(record.folder+"/"))touched.add(record.folder)}
+  for(const folder of touched){if(!contributions[folder])contributions[folder]=[];contributions[folder].push({number:pr.number,title:String(pr.title||"Pull Request").slice(0,200),url:pr.html_url,merged_at:pr.merged_at,author:githubUser(pr.user)})}
+ }));
+ const repoOwner={login:"minhReal",avatar_url:"https://avatars.githubusercontent.com/u/175275111?v=4",html_url:"https://github.com/minhReal"};
+ const scripts=records.map(record=>{
+  const history=(contributions[record.folder]||[]).sort((a,b)=>new Date(a.merged_at)-new Date(b.merged_at)),added=history[0]||null,updated=history[history.length-1]||null,creator=added?.author||repoOwner;
+  return {path:record.folder+"/"+record.source,name:record.title,title:record.title,description:record.description,category:record.category,upload_method:record.method,thumbnail_url:record.thumbnail_url,author:creator.login,username:creator.login,avatar_url:creator.avatar_url,html_url:creator.html_url,github_id:record.id,github_folder:record.folder,added_by:creator,last_updated_by:updated?.author||creator,pull_requests:history,initial_pr:added,latest_pr:updated};
+ });
+ const result={scripts,records:records.map(({manifest,...r})=>r),syncedAt:new Date().toISOString()};
+ try{await cache.put(key,new Response(JSON.stringify(result),{headers:{"content-type":"application/json; charset=utf-8","cache-control":"public, max-age=300"}}))}catch{}
+ return result;
+}
+
 async function currentUser(req,env){const session=await readSession(req,env.gg_secret);if(!session)return null;return await env.DB.prepare("SELECT id,public_id,username,display_name,avatar_url,bio,created_at,username_updated_at FROM users WHERE google_sub=? LIMIT 1").bind(session.sub).first()}
 async function handle(request,env){
  const url=new URL(request.url),origin=SITE;
@@ -96,9 +146,24 @@ async function handle(request,env){
   const updatedUser=await currentUser(request,env);if(updatedUser)delete updatedUser.id;return json({ok:true,user:updatedUser});
  }
  if(url.pathname==="/api/health"){let database=false;try{await env.DB.prepare("SELECT 1").first();database=true}catch{}return json({ok:true,service:"Sieu-Sv_Library API",database})}
- if(url.pathname==="/api/github/scripts"){const r=await fetch("https://api.github.com/repos/"+REPO+"/git/trees/main?recursive=1",{headers:{"accept":"application/vnd.github+json","user-agent":"Sieu-Sv_Library"}});if(!r.ok)return json({error:"github_unavailable"},502);const data=await r.json();const scripts=(data.tree||[]).filter(x=>x.type==="blob"&&x.path.toLowerCase().endsWith(".lua")).map(x=>({path:x.path,name:x.path.split("/").pop().replace(/\\.lua$/i,""),title:x.path.split("/").pop().replace(/\\.lua$/i,""),author:"minhReal",username:"minhReal",category:"GitHub",url:"https://raw.githubusercontent.com/"+REPO+"/main/"+x.path.split("/").map(encodeURIComponent).join("/"),description:"Lua script from the Sieu-Sv_Library repository"}));return json({scripts,syncedAt:new Date().toISOString()})}
- if(url.pathname==="/api/github/script"&&request.method==="GET"){const path=url.searchParams.get("path")||"";if(!path.toLowerCase().endsWith(".lua"))return json({error:"invalid_script_path"},400);const result=await githubFile(path,request);if(result.source===null)return json({error:result.status===404?"script_not_found":"github_temporarily_unavailable",message:result.status===404?"Script does not exist in the repository.":"GitHub is temporarily unavailable and no cached copy exists."},result.status);const title=path.split("/").pop().replace(/\\.lua$/i,"");return json({title,name:title,source:result.source,path,description:"Lua script from the Sieu-Sv_Library repository",category:"GitHub",author:"minhReal",username:"minhReal",kind:"GitHub",cached:!!result.stale})}
- if(url.pathname.startsWith("/api/scripts/")&&request.method==="GET"){const id=decodeURIComponent(url.pathname.slice("/api/scripts/".length));if(!id||id.length>128)return json({error:"invalid_id"},400);try{const row=await env.DB.prepare("SELECT s.id,s.title,s.description,s.category,s.user_id,s.source,s.thumbnail_url,s.created_at,s.updated_at,s.upload_method,s.import_parts,u.username,u.display_name,u.avatar_url,u.public_id FROM scripts s LEFT JOIN users u ON u.id=s.user_id WHERE s.id=? AND s.visibility='public' LIMIT 1").bind(id).first();if(!row)return json({error:"script_not_found"},404);const viewer=await currentUser(request,env),isOwner=!!(viewer&&viewer.id===row.user_id);const counts=await env.DB.prepare("SELECT SUM(CASE WHEN vote='like' THEN 1 ELSE 0 END) AS likes,SUM(CASE WHEN vote='dislike' THEN 1 ELSE 0 END) AS dislikes FROM script_votes WHERE script_id=?").bind(id).first();const ownVote=viewer?await env.DB.prepare("SELECT vote FROM script_votes WHERE script_id=? AND user_id=?").bind(id,viewer.id).first():null;delete row.user_id;try{row.import_parts=JSON.parse(row.import_parts||"[]");if(!Array.isArray(row.import_parts))row.import_parts=[]}catch{row.import_parts=[]}row.upload_method=["source","import","both"].includes(row.upload_method)?row.upload_method:"source";return json({...row,is_owner:isOwner,likes:Number(counts?.likes||0),dislikes:Number(counts?.dislikes||0),my_vote:ownVote?.vote||null,owner:row.display_name||row.username||"community",kind:"Community"})}catch{return json({error:"database_error"},500)}}
+ 
+ if(url.pathname==="/api/github/scripts"&&request.method==="GET"){try{const index=await githubIndex(request);return json({scripts:index.scripts,syncedAt:index.syncedAt},200,{"Cache-Control":"public, max-age=300"})}catch{return json({error:"github_unavailable"},502)}}
+ if(url.pathname==="/api/github/script"&&request.method==="GET"){
+  const path=url.searchParams.get("path")||"",id=url.searchParams.get("id")||"",file=url.searchParams.get("file");
+  if(!path&&!id)return json({error:"script_path_required"},400);
+  try{
+   const index=await githubIndex(request);
+   const record=index.records.find(x=>(id&&x.id===id)||(path&&(path===x.folder||path===x.manifestPath||path===x.folder+"/"+x.source||path.startsWith(x.folder+"/"))));
+   if(!record)return json({error:"script_not_found"},404);
+   const relative=file||record.source;
+   if(!safeManifestPath(relative)||(!record.files.some(x=>x.path===relative)&&!record.importParts.includes(relative)))return json({error:"file_not_in_manifest"},404);
+   const loaded=await githubFile(record.folder+"/"+relative,request);
+   if(loaded.source===null)return json({error:loaded.status===404?"file_not_found":"github_temporarily_unavailable"},loaded.status);
+   const script=index.scripts.find(x=>x.github_id===record.id);
+   return json({kind:"GitHub",id:record.id,title:record.title,name:record.title,description:record.description,category:record.category,upload_method:record.method,method:record.method,thumbnail_url:record.thumbnail_url,path:record.folder+"/"+record.source,github_folder:record.folder,manifest_path:record.manifestPath,files:record.files,import_part_paths:record.importParts,selected_file:relative,source:loaded.source,author:script?.author||"minhReal",username:script?.username||"minhReal",avatar_url:script?.avatar_url||null,html_url:script?.html_url||null,added_by:script?.added_by||null,last_updated_by:script?.last_updated_by||null,initial_pr:script?.initial_pr||null,latest_pr:script?.latest_pr||null,pull_requests:script?.pull_requests||[],cached:!!loaded.stale},200,{"Cache-Control":"public, max-age=120"});
+  }catch{return json({error:"github_unavailable"},502)}
+ }
+if(url.pathname.startsWith("/api/scripts/")&&request.method==="GET"){const id=decodeURIComponent(url.pathname.slice("/api/scripts/".length));if(!id||id.length>128)return json({error:"invalid_id"},400);try{const row=await env.DB.prepare("SELECT s.id,s.title,s.description,s.category,s.user_id,s.source,s.thumbnail_url,s.created_at,s.updated_at,s.upload_method,s.import_parts,u.username,u.display_name,u.avatar_url,u.public_id FROM scripts s LEFT JOIN users u ON u.id=s.user_id WHERE s.id=? AND s.visibility='public' LIMIT 1").bind(id).first();if(!row)return json({error:"script_not_found"},404);const viewer=await currentUser(request,env),isOwner=!!(viewer&&viewer.id===row.user_id);const counts=await env.DB.prepare("SELECT SUM(CASE WHEN vote='like' THEN 1 ELSE 0 END) AS likes,SUM(CASE WHEN vote='dislike' THEN 1 ELSE 0 END) AS dislikes FROM script_votes WHERE script_id=?").bind(id).first();const ownVote=viewer?await env.DB.prepare("SELECT vote FROM script_votes WHERE script_id=? AND user_id=?").bind(id,viewer.id).first():null;delete row.user_id;try{row.import_parts=JSON.parse(row.import_parts||"[]");if(!Array.isArray(row.import_parts))row.import_parts=[]}catch{row.import_parts=[]}row.upload_method=["source","import","both"].includes(row.upload_method)?row.upload_method:"source";return json({...row,is_owner:isOwner,likes:Number(counts?.likes||0),dislikes:Number(counts?.dislikes||0),my_vote:ownVote?.vote||null,owner:row.display_name||row.username||"community",kind:"Community"})}catch{return json({error:"database_error"},500)}}
  if(url.pathname==="/api/scripts"&&request.method==="GET"){try{const q=(url.searchParams.get("q")||"").slice(0,100),viewer=await currentUser(request,env);const rows=await env.DB.prepare("SELECT s.id,s.title,s.description,s.category,s.thumbnail_url,s.created_at,s.updated_at,u.username,u.display_name,u.avatar_url,u.public_id,(SELECT COUNT(*) FROM script_votes v WHERE v.script_id=s.id AND v.vote='like') AS likes,(SELECT COUNT(*) FROM script_votes v WHERE v.script_id=s.id AND v.vote='dislike') AS dislikes,(SELECT v.vote FROM script_votes v WHERE v.script_id=s.id AND v.user_id=? LIMIT 1) AS my_vote FROM scripts s LEFT JOIN users u ON u.id=s.user_id WHERE s.visibility='public' AND (s.title LIKE ? OR s.description LIKE ?) ORDER BY s.created_at DESC LIMIT 100").bind(viewer?.id||null,"%"+q+"%","%"+q+"%").all();return json({scripts:rows.results||[]})}catch{return json({error:"database_error"},500)}}
  if(url.pathname==="/api/scripts"&&request.method==="POST"){
   const user=await currentUser(request,env);if(!user)return json({error:"unauthorized"},401);

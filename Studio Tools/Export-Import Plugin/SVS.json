@@ -3,7 +3,7 @@
   "id": "export-import-plugin",
   "title": "Export-Import Plugin",
   "description": "Export and import plugin instances as code strings, including multiple String Import parts, directly from a mobile device.",
-  "category": "Studio Tools",
+  "category": "Plugins",
   "method": "source",
   "source": "EI-Source.lua",
   "files": [

@@ -59,10 +59,10 @@ async function githubIndex(request){
    if(!safeManifestPath(rel)||!treeFiles.has(folder+"/"+rel))continue;
    if(!listed.some(x=>x.path===rel))listed.push({path:rel,role:typeof entry==="object"&&typeof entry.role==="string"?entry.role:"file"});
   }
-  const sourcePath=safeManifestPath(manifest.source)&&treeFiles.has(folder+"/"+manifest.source)?manifest.source:(listed.find(x=>/\.(lua|luau)$/i.test(x.path))?.path||"");
-  if(!sourcePath)return;
-  if(!listed.some(x=>x.path===sourcePath))listed.unshift({path:sourcePath,role:"main"});
   const importParts=(Array.isArray(manifest.import_parts)?manifest.import_parts:[]).filter(safeManifestPath).filter(x=>treeFiles.has(folder+"/"+x));
+  const sourcePath=safeManifestPath(manifest.source)&&treeFiles.has(folder+"/"+manifest.source)?manifest.source:(listed.find(x=>/\.(lua|luau)$/i.test(x.path))?.path||importParts[0]||"");
+  if(!sourcePath)return;
+  if(!listed.some(x=>x.path===sourcePath))listed.unshift({path:sourcePath,role:importParts.includes(sourcePath)?"import_part":"main"});
   for(const rel of importParts)if(!listed.some(x=>x.path===rel))listed.push({path:rel,role:"import_part"});
   const manifestFile=manifestPath.slice(manifestPath.lastIndexOf("/")+1);if(!listed.some(x=>x.path===manifestFile))listed.unshift({path:manifestFile,role:"manifest"});
   const fallback=manifestPath.slice(0,manifestPath.lastIndexOf("/")).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");

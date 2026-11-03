@@ -3,7 +3,7 @@
   "id": "open-chat",
   "title": "Open Chat",
   "description": "Toggles the Roblox chat interface from a plugin button.",
-  "category": "Sieu-SV Plugins",
+  "category": "Plugins",
   "method": "source",
   "source": "Open Chat.lua",
   "files": [
@@ -14,5 +14,5 @@
   ],
   "import_parts": [],
   "thumbnail": null,
-  "tag": "Sieu-SV Plugin"
+  "tag": "Github"
 }

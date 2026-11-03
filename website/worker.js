@@ -14,7 +14,7 @@ function constantTimeEqual(a,b){if(typeof a!=="string"||typeof b!=="string"||a.l
 async function readSession(req,secret){try{const [p,s]=getCookie(req,COOKIE).split(".");if(!p||!s||!secret)return null;const expected=await sign(p,secret);if(!constantTimeEqual(s,expected))return null;const v=JSON.parse(new TextDecoder().decode(unb64u(p)));return v&&typeof v.sub==="string"&&v.exp>Date.now()/1000?v:null}catch{return null}}
 async function githubFile(path,request){
  if(!safeManifestPath(path)||path.length>500)return {status:400,source:null};
- const cacheKey=new Request(new URL("/__github_cache_v3/"+encodeURIComponent(path),request.url));
+ const cacheKey=new Request(new URL("/__github_cache_v4/"+encodeURIComponent(path),request.url));
  const cache=caches.default;
  let cached=null;
  try{cached=await cache.match(cacheKey)}catch{}
@@ -57,9 +57,9 @@ function githubUser(user){return user?{login:String(user.login||"unknown"),avata
 async function githubApi(value){try{const url=new URL(value);if(url.protocol!=="https:"||url.hostname!=="api.github.com"||!url.pathname.startsWith("/repos/"+REPO+"/"))return null;const r=await fetch(url.toString(),{headers:{"accept":"application/vnd.github+json","user-agent":"Sieu-Sv_Library"},cf:{cacheTtl:300,cacheEverything:true}});if(!r.ok)return null;const length=Number(r.headers.get("content-length")||0);if(length>5000000)return null;const raw=await r.text();if(raw.length>5000000)return null;return JSON.parse(raw)}catch{return null}}
 function safeManifestPath(value){return typeof value==="string"&&value.length>0&&value.length<300&&!value.startsWith("/")&&!value.includes("\\")&&!/[?#]/.test(value)&&![...value].some(c=>{const n=c.charCodeAt(0);return n<32||n===127})&&!value.split("/").some(p=>!p||p==="."||p==="..")}
 async function githubIndex(request){
- const key=new Request(new URL("/__github_manifest_index_v2",request.url)),cache=caches.default;
+ const key=new Request(new URL("/__github_manifest_index_v3",request.url)),cache=caches.default;
  try{const cached=await cache.match(key);if(cached)return await cached.json()}catch{}
- const tree=await githubApi("https://api.github.com/repos/"+REPO+"/git/trees/main?recursive=1&svs=2");
+ const tree=await githubApi("https://api.github.com/repos/"+REPO+"/git/trees/main?recursive=1&svs=3");
  if(!tree||!Array.isArray(tree.tree))throw new Error("github_tree_unavailable");
  const treeFiles=new Set(tree.tree.filter(x=>x.type==="blob").map(x=>x.path));
  const manifestPaths=tree.tree.filter(x=>x.type==="blob"&&(x.path.split("/").pop()==="SVS.json"||x.path.split("/").pop()==="svs.json")).map(x=>x.path),records=[];

@@ -3,7 +3,7 @@
   "id": "weld",
   "title": "Weld",
   "description": "Select parts and create local welds, weld constraints, snaps, attachments and supported constraints while preserving positions. Work in progress.",
-  "category": "Studio Tools",
+  "category": "Plugins",
   "method": "source",
   "source": "Weld.lua",
   "files": [

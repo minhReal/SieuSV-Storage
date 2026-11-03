@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "id": "automatically-add-uistroke",
+  "title": "Automatically Add UIStroke",
+  "description": "Adds a consistent UIStroke outline to existing and newly added TextButtons and ImageButtons.",
+  "category": "Other",
+  "method": "source",
+  "source": "AutomaticallyAddUIStroke.lua",
+  "files": [
+    {
+      "path": "AutomaticallyAddUIStroke.lua",
+      "role": "main"
+    }
+  ],
+  "import_parts": [],
+  "thumbnail": null,
+  "tag": "Github"
+}

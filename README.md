@@ -32,10 +32,10 @@ Browse, inspect, copy or fork the source files here. The ready-to-use model is a
 | **Weld** | Select parts and create local welds and supported constraints while preserving positions. *(WIP.)* | [Folder](<Studio Tools/Weld>) |
 | **Grip Editor** | Edit a Tool's `Grip` with Move / Rotate handles and snap settings. Playtest only. | [Folder](<Studio Tools/Grip Editor>) |
 | **Export-Import Plugin** | Export and import plugin instances as code strings. Includes EN/VN guides. | [Folder](<Studio Tools/Export-Import Plugin>) |
-| **Open Chat** | Toggle the Roblox chat interface. | [Folder](<Utilities/Open Chat>) |
-| **Automatic Button Arrangement** | Automatically arranges buttons in a scrolling grid. | [Folder](<Utilities/Automatic Button Arrangement>) |
-| **Automatically Add UIStroke** | Adds outlines to TextButtons and ImageButtons. | [Folder](<Utilities/Automatically Add UIStroke>) |
-| **Draggable** | Adds touch and mouse dragging to supported plugin panels. | [Folder](<Utilities/Draggable>) |
+| **Open Chat** | A SIEUSV plugin that toggles the Roblox chat interface. | [Folder](<Sieu-SV Plugins/Open Chat>) |
+| **Automatic Button Arrangement** | Automatically arranges buttons in a scrolling grid. | [Folder](<Other/Automatic Button Arrangement>) |
+| **Automatically Add UIStroke** | Adds outlines to TextButtons and ImageButtons. | [Folder](<Other/Automatically Add UIStroke>) |
+| **Draggable** | Adds touch and mouse dragging to supported plugin panels. | [Folder](<Other/Draggable>) |
 
 ## How to use
 
@@ -54,12 +54,12 @@ There are two ways to submit a script to SieuSV-Storage.
 ### Option 1 — Pull Request (GitHub)
 
 1. Fork this repository and create a branch.
-2. Put each plugin or standalone script in its own folder under an appropriate category, such as `Studio Tools/` or `Utilities/`.
+2. Put each plugin or standalone script in its own folder under an appropriate category, such as `Studio Tools/`, `Sieu-SV Plugins/` or `Other/`.
 3. Add a **`SVS.json`** file (or **`svs.json`**) at the root of that script folder.
 4. Add the Luau source files and any supporting documentation to the same folder.
 5. Open a Pull Request against `main`. Include a short summary and note any playtest or platform limitations.
 
-After a Pull Request is merged, the website reads its manifest and GitHub history. The Explorer view displays the script's files, description, category, upload method, PR link, and GitHub contributor profile.
+After a Pull Request is merged, the website reads its manifest and GitHub history. The file tree displays script files. The Information panel shows the custom tag, category, upload method, repository path, PR history and GitHub contributor profile.
 
 #### SVS.json format
 
@@ -71,7 +71,8 @@ Manifest paths are relative to the folder containing the JSON file. Use valid JS
   "id": "my-script",
   "title": "My Script",
   "description": "What the script does.",
-  "category": "Utilities",
+  "category": "Other",
+  "tag": "Github",
   "method": "source",
   "source": "Main.lua",
   "files": [
@@ -85,6 +86,7 @@ Manifest paths are relative to the folder containing the JSON file. Use valid JS
 
 - `id`: unique, lowercase identifier.
 - `title`, `description`, `category`: information shown in the library.
+- `tag`: a custom display tag. Defaults to `Github` when omitted; use `Sieu-SV Plugin` for an official SIEUSV plugin.
 - `method`: `source`, `import` or `both`.
 - `source`: relative path to the main `.lua` or `.luau` file when using `source` or `both`.
 - `files`: files displayed in the Explorer. Each path is relative to the manifest folder. Use roles such as `main`, `helper`, `documentation` or `button`.
@@ -113,11 +115,12 @@ SieuSV-Storage/
 │   ├── Grip Editor/
 │   ├── Surface Preview/
 │   └── Weld/
-├── Utilities/
-│   ├── Open Chat/
+├── Other/
 │   ├── Automatic Button Arrangement/
 │   ├── Automatically Add UIStroke/
 │   └── Draggable/
+├── Sieu-SV Plugins/
+│   └── Open Chat/
 ├── website/
 ├── LICENSE.md
 └── README.md
@@ -160,7 +163,7 @@ Bạn có thể xem, đọc, sao chép hoặc fork mã nguồn tại đây. Mode
 | **Weld** | Tạo weld và constraint cục bộ, giữ nguyên vị trí. *(Đang phát triển.)* |
 | **Grip Editor** | Chỉnh `Grip` của Tool bằng Move / Rotate. Chỉ dùng khi playtest. |
 | **Export-Import Plugin** | Xuất và nhập plugin bằng chuỗi code, có hướng dẫn EN/VN. |
-| **Open Chat** | Bật / tắt giao diện chat Roblox. |
+| **Open Chat** | Plugin SIEUSV dùng để bật / tắt giao diện chat Roblox. |
 | **Automatic Button Arrangement** | Tự động sắp xếp button trong scrolling grid. |
 | **Automatically Add UIStroke** | Tự thêm viền cho TextButton và ImageButton. |
 | **Draggable** | Kéo thả các panel plugin bằng cảm ứng hoặc chuột. |
@@ -180,14 +183,14 @@ Một số công cụ chỉ hoạt động trong playtest.
 **Cách 1 — GitHub Pull Request**
 
 1. Fork repository và tạo branch riêng.
-2. Đặt mỗi plugin hoặc script độc lập trong một thư mục thuộc nhóm phù hợp, ví dụ `Studio Tools/` hoặc `Utilities/`.
+2. Đặt mỗi plugin hoặc script độc lập trong một thư mục thuộc nhóm phù hợp, ví dụ `Studio Tools/`, `Sieu-SV Plugins/` hoặc `Other/`.
 3. Thêm file **`SVS.json`** (hoặc **`svs.json`**) ở thư mục gốc của script đó.
 4. Thêm mã nguồn Luau và tài liệu liên quan vào cùng thư mục.
 5. Tạo Pull Request hướng đến branch `main`, kèm mô tả ngắn và các giới hạn cần biết.
 
 Sau khi PR được merge, website đọc manifest và lịch sử GitHub. Explorer hiển thị cây file, mô tả, danh mục, phương thức tải, link PR và hồ sơ contributor.
 
-Manifest hỗ trợ các trường `id`, `title`, `description`, `category`, `method`, `source`, `files`, `import_parts` và `thumbnail`. Đường dẫn trong manifest tính từ thư mục chứa file JSON.
+Manifest hỗ trợ các trường `id`, `title`, `description`, `category`, `tag`, `method`, `source`, `files`, `import_parts` và `thumbnail`. Tag mặc định là `Github`; có thể tùy chỉnh theo loại plugin. Đường dẫn trong manifest tính từ thư mục chứa file JSON.
 
 **Cách 2 — Website**
 

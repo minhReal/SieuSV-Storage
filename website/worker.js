@@ -40,7 +40,7 @@ async function githubFile(path,request){
    const bytes=new Uint8Array(total);let offset=0;
    for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength}
    const source=new TextDecoder("utf-8",{fatal:false}).decode(bytes);
-   try{await cache.put(cacheKey,new Response(source,{headers:{"content-type":"text/plain; charset=utf-8","cache-control":"public, max-age=3600"}}))}catch{}
+   try{await cache.put(cacheKey,new Response(source,{headers:{"content-type":"text/plain; charset=utf-8","cache-control":"public, max-age=300"}}))}catch{}
    return {status:200,source};
   }
   if(r?.status===404)return {status:404,source:null};
@@ -60,7 +60,7 @@ async function githubIndex(request){
  const key=new Request(new URL("/__github_manifest_index_v3",request.url)),cache=caches.default;
  try{const cached=await cache.match(key);if(cached)return await cached.json()}catch{}
  const tree=await githubApi("https://api.github.com/repos/"+REPO+"/git/trees/main?recursive=1&svs=3");
- if(!tree||!Array.isArray(tree.tree))throw new Error("github_tree_unavailable");
+ if(!tree||!Array.isArray(tree.tree)||tree.truncated)throw new Error("github_tree_unavailable");
  const treeFiles=new Set(tree.tree.filter(x=>x.type==="blob").map(x=>x.path));
  const manifestPaths=tree.tree.filter(x=>x.type==="blob"&&(x.path.split("/").pop()==="SVS.json"||x.path.split("/").pop()==="svs.json")).map(x=>x.path),records=[];
  await Promise.all(manifestPaths.map(async manifestPath=>{
@@ -69,12 +69,12 @@ async function githubIndex(request){
   let manifest;try{manifest=JSON.parse(raw.source)}catch{return}
   if(!manifest||typeof manifest!=="object"||Array.isArray(manifest)||raw.source.length>65536)return;
   const listed=[];
-  for(const entry of Array.isArray(manifest.files)?manifest.files:[]){
+  for(const entry of (Array.isArray(manifest.files)?manifest.files:[]).slice(0,100)){
    const rel=typeof entry==="string"?entry:entry?.path;
    if(!safeManifestPath(rel)||!treeFiles.has(folder+"/"+rel))continue;
    if(!listed.some(x=>x.path===rel))listed.push({path:rel,role:typeof entry==="object"&&typeof entry.role==="string"?entry.role:"file"});
   }
-  const importParts=(Array.isArray(manifest.import_parts)?manifest.import_parts:[]).filter(safeManifestPath).filter(x=>treeFiles.has(folder+"/"+x));
+  const importParts=(Array.isArray(manifest.import_parts)?manifest.import_parts:[]).filter(safeManifestPath).filter(x=>treeFiles.has(folder+"/"+x)).slice(0,20);
   const sourcePath=safeManifestPath(manifest.source)&&treeFiles.has(folder+"/"+manifest.source)?manifest.source:(listed.find(x=>/\.(lua|luau)$/i.test(x.path))?.path||importParts[0]||"");
   if(!sourcePath)return;
   if(!listed.some(x=>x.path===sourcePath))listed.unshift({path:sourcePath,role:importParts.includes(sourcePath)?"import_part":"main"});

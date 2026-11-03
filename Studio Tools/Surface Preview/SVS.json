@@ -3,7 +3,7 @@
   "id": "surface-preview",
   "title": "Surface Preview",
   "description": "Displays the X, Y and Z axes and surface information for a selected part.",
-  "category": "Studio Tools",
+  "category": "Plugins",
   "method": "source",
   "source": "Surface Preview.lua",
   "files": [

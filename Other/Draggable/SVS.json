@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "id": "draggable",
+  "title": "Draggable",
+  "description": "Enables touch and mouse dragging for supported plugin panels.",
+  "category": "Other",
+  "method": "source",
+  "source": "Draggable.lua",
+  "files": [
+    {
+      "path": "Draggable.lua",
+      "role": "main"
+    }
+  ],
+  "import_parts": [],
+  "thumbnail": null,
+  "tag": "Github"
+}

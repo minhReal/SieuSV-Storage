@@ -13,34 +13,49 @@ async function makeSession(sub,secret){const payload=b64u(new TextEncoder().enco
 function constantTimeEqual(a,b){if(typeof a!=="string"||typeof b!=="string"||a.length!==b.length)return false;let diff=0;for(let i=0;i<a.length;i++)diff|=a.charCodeAt(i)^b.charCodeAt(i);return diff===0}
 async function readSession(req,secret){try{const [p,s]=getCookie(req,COOKIE).split(".");if(!p||!s||!secret)return null;const expected=await sign(p,secret);if(!constantTimeEqual(s,expected))return null;const v=JSON.parse(new TextDecoder().decode(unb64u(p)));return v&&typeof v.sub==="string"&&v.exp>Date.now()/1000?v:null}catch{return null}}
 async function githubFile(path,request){
- if(!path||path.length>500||path.split("/").some(p=>!p||p==="."||p===".."))return {status:400,source:null};
- const cacheKey=new Request(new URL("/__github_cache_v2/"+encodeURIComponent(path),request.url));
- const cache= caches.default;
+ if(!safeManifestPath(path)||path.length>500)return {status:400,source:null};
+ const cacheKey=new Request(new URL("/__github_cache_v3/"+encodeURIComponent(path),request.url));
+ const cache=caches.default;
  let cached=null;
  try{cached=await cache.match(cacheKey)}catch{}
  try{
   const upstream="https://raw.githubusercontent.com/"+REPO+"/main/"+path.split("/").map(encodeURIComponent).join("/");
   let r;
   for(let attempt=0;attempt<2;attempt++){
-   try{r=await fetch(upstream,{headers:{"user-agent":"Sieu-Sv_Library"}});if(r.ok||r.status===404||r.status===403)break}catch{}
+   try{r=await fetch(upstream,{headers:{"user-agent":"Sieu-Sv_Library"}});if(r.ok||r.status===404||r.status===403||r.status===413)break}catch{}
   }
   if(r?.ok){
-   const source=await r.text();
+   const maxBytes=1500000,declared=Number(r.headers.get("content-length")||0);
+   if(declared>maxBytes){try{await r.body?.cancel()}catch{};return {status:413,source:null}}
+   const reader=r.body?.getReader();
+   if(!reader)return {status:503,source:null};
+   const chunks=[];let total=0;
+   while(true){
+    const part=await reader.read();
+    if(part.done)break;
+    total+=part.value.byteLength;
+    if(total>maxBytes){try{await reader.cancel()}catch{};return {status:413,source:null}}
+    chunks.push(part.value);
+   }
+   const bytes=new Uint8Array(total);let offset=0;
+   for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength}
+   const source=new TextDecoder("utf-8",{fatal:false}).decode(bytes);
    try{await cache.put(cacheKey,new Response(source,{headers:{"content-type":"text/plain; charset=utf-8","cache-control":"public, max-age=3600"}}))}catch{}
    return {status:200,source};
   }
   if(r?.status===404)return {status:404,source:null};
-  if(cached)return {status:200,source:await cached.text(),stale:true};
+  if(r?.status===413)return {status:413,source:null};
+  if(cached){const source=await cached.text();if(source.length<=1500000)return {status:200,source,stale:true}}
   return {status:503,source:null};
  }catch{
-  if(cached){try{return {status:200,source:await cached.text(),stale:true}}catch{}}
+  if(cached){try{const source=await cached.text();if(source.length<=1500000)return {status:200,source,stale:true}}catch{}}
   return {status:503,source:null};
  }
 }
 
 function githubUser(user){return user?{login:String(user.login||"unknown"),avatar_url:user.avatar_url||null,html_url:user.html_url||null}:null}
-async function githubApi(url){try{const r=await fetch(url,{headers:{"accept":"application/vnd.github+json","user-agent":"Sieu-Sv_Library"},cf:{cacheTtl:300,cacheEverything:true}});if(!r.ok)return null;return await r.json()}catch{return null}}
-function safeManifestPath(value){return typeof value==="string"&&value.length>0&&value.length<300&&!value.startsWith("/")&&!value.includes("\\")&&!value.split("/").some(p=>!p||p==="."||p==="..")}
+async function githubApi(value){try{const url=new URL(value);if(url.protocol!=="https:"||url.hostname!=="api.github.com"||!url.pathname.startsWith("/repos/"+REPO+"/"))return null;const r=await fetch(url.toString(),{headers:{"accept":"application/vnd.github+json","user-agent":"Sieu-Sv_Library"},cf:{cacheTtl:300,cacheEverything:true}});if(!r.ok)return null;const length=Number(r.headers.get("content-length")||0);if(length>5000000)return null;const raw=await r.text();if(raw.length>5000000)return null;return JSON.parse(raw)}catch{return null}}
+function safeManifestPath(value){return typeof value==="string"&&value.length>0&&value.length<300&&!value.startsWith("/")&&!value.includes("\\")&&!/[?#\\u0000-\\u001f\\u007f]/.test(value)&&!value.split("/").some(p=>!p||p==="."||p==="..")}
 async function githubIndex(request){
  const key=new Request(new URL("/__github_manifest_index_v2",request.url)),cache=caches.default;
  try{const cached=await cache.match(key);if(cached)return await cached.json()}catch{}
@@ -52,7 +67,7 @@ async function githubIndex(request){
   const folder=manifestPath.slice(0,manifestPath.lastIndexOf("/")),raw=await githubFile(manifestPath,request);
   if(!raw.source)return;
   let manifest;try{manifest=JSON.parse(raw.source)}catch{return}
-  if(!manifest||typeof manifest!=="object"||Array.isArray(manifest))return;
+  if(!manifest||typeof manifest!=="object"||Array.isArray(manifest)||raw.source.length>65536)return;
   const listed=[];
   for(const entry of Array.isArray(manifest.files)?manifest.files:[]){
    const rel=typeof entry==="string"?entry:entry?.path;
@@ -70,7 +85,7 @@ async function githubIndex(request){
   if(!/^[a-z0-9][a-z0-9-]*$/.test(id))return;
   const method=["source","import","both"].includes(manifest.method)?manifest.method:"source";
   const thumb=safeManifestPath(manifest.thumbnail)&&treeFiles.has(folder+"/"+manifest.thumbnail)?"https://raw.githubusercontent.com/"+REPO+"/main/"+(folder+"/"+manifest.thumbnail).split("/").map(encodeURIComponent).join("/") : null;
-  records.push({id,folder,manifestPath,manifest:{...manifest},title:String(manifest.title||id).slice(0,100),description:String(manifest.description||"").slice(0,1000),category:String(manifest.category||"Other").slice(0,60),tag:String(typeof manifest.tag==="string"&&manifest.tag.trim()?manifest.tag.trim():"Github").slice(0,48),method,source:sourcePath,files:listed,importParts,thumbnail_url:thumb,repo_url:"https://github.com/"+REPO+"/tree/main/"+folder.split("/").map(encodeURIComponent).join("/")});
+  records.push({id,folder,manifestPath,manifest:{...manifest},title:String(manifest.title||id).slice(0,100),description:String(manifest.description||"").slice(0,1000),category:(String(manifest.category||"Other").trim()==="Studio Tools"?"Plugins":String(manifest.category||"Other")).slice(0,60),tag:String(typeof manifest.tag==="string"&&manifest.tag.trim()?manifest.tag.trim():"Github").slice(0,48),method,source:sourcePath,files:listed,importParts,thumbnail_url:thumb||"https://raw.githubusercontent.com/"+REPO+"/main/logo2.jpg",repo_url:"https://github.com/"+REPO+"/tree/main/"+folder.split("/").map(encodeURIComponent).join("/")});
  }));
  records.sort((a,b)=>a.category.localeCompare(b.category)||a.title.localeCompare(b.title));
  const prs=await githubApi("https://api.github.com/repos/"+REPO+"/pulls?state=closed&per_page=100&sort=updated&direction=desc")||[],merged=prs.filter(p=>p.merged_at&&p.user).slice(0,20),contributions={};
@@ -162,7 +177,7 @@ async function handle(request,env){
    const loaded=await githubFile(record.folder+"/"+relative,request);
    if(loaded.source===null)return json({error:loaded.status===404?"file_not_found":"github_temporarily_unavailable"},loaded.status);
    const script=index.scripts.find(x=>x.github_id===record.id);
-   return json({kind:"GitHub",id:record.id,title:record.title,name:record.title,description:record.description,category:record.category,tag:record.tag,upload_method:record.method,method:record.method,thumbnail_url:record.thumbnail_url,repo_url:record.repo_url,path:record.folder+"/"+record.source,github_folder:record.folder,manifest_path:record.manifestPath,files:record.files,import_part_paths:record.importParts,selected_file:relative,source:loaded.source,author:script?.author||"minhReal",username:script?.username||"minhReal",avatar_url:script?.avatar_url||null,html_url:script?.html_url||null,added_by:script?.added_by||null,last_updated_by:script?.last_updated_by||null,initial_pr:script?.initial_pr||null,latest_pr:script?.latest_pr||null,pull_requests:script?.pull_requests||[],cached:!!loaded.stale},200,{"Cache-Control":"public, max-age=120"});
+   return json({kind:"GitHub",id:record.id,title:record.title,name:record.title,description:record.description,category:record.category,tag:record.tag,upload_method:record.method,method:record.method,thumbnail_url:record.thumbnail_url,repo_url:record.repo_url,path:record.folder+"/"+record.source,github_folder:record.folder,manifest_path:record.manifestPath,files:record.files,import_part_paths:record.importParts,import_parts:await Promise.all(record.importParts.slice(0,20).map(async part=>{const item=await githubFile(record.folder+"/"+part,request);return item.source===null?null:item.source})),selected_file:relative,source:loaded.source,author:script?.author||"minhReal",username:script?.username||"minhReal",avatar_url:script?.avatar_url||null,html_url:script?.html_url||null,added_by:script?.added_by||null,last_updated_by:script?.last_updated_by||null,initial_pr:script?.initial_pr||null,latest_pr:script?.latest_pr||null,pull_requests:script?.pull_requests||[],cached:!!loaded.stale},200,{"Cache-Control":"public, max-age=120"});
   }catch{return json({error:"github_unavailable"},502)}
  }
 if(url.pathname.startsWith("/api/scripts/")&&request.method==="GET"){const id=decodeURIComponent(url.pathname.slice("/api/scripts/".length));if(!id||id.length>128)return json({error:"invalid_id"},400);try{const row=await env.DB.prepare("SELECT s.id,s.title,s.description,s.category,s.user_id,s.source,s.thumbnail_url,s.created_at,s.updated_at,s.upload_method,s.import_parts,u.username,u.display_name,u.avatar_url,u.public_id FROM scripts s LEFT JOIN users u ON u.id=s.user_id WHERE s.id=? AND s.visibility='public' LIMIT 1").bind(id).first();if(!row)return json({error:"script_not_found"},404);const viewer=await currentUser(request,env),isOwner=!!(viewer&&viewer.id===row.user_id);const counts=await env.DB.prepare("SELECT SUM(CASE WHEN vote='like' THEN 1 ELSE 0 END) AS likes,SUM(CASE WHEN vote='dislike' THEN 1 ELSE 0 END) AS dislikes FROM script_votes WHERE script_id=?").bind(id).first();const ownVote=viewer?await env.DB.prepare("SELECT vote FROM script_votes WHERE script_id=? AND user_id=?").bind(id,viewer.id).first():null;delete row.user_id;try{row.import_parts=JSON.parse(row.import_parts||"[]");if(!Array.isArray(row.import_parts))row.import_parts=[]}catch{row.import_parts=[]}row.upload_method=["source","import","both"].includes(row.upload_method)?row.upload_method:"source";return json({...row,is_owner:isOwner,likes:Number(counts?.likes||0),dislikes:Number(counts?.dislikes||0),my_vote:ownVote?.vote||null,owner:row.display_name||row.username||"community",kind:"Community"})}catch{return json({error:"database_error"},500)}}

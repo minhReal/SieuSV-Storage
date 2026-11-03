@@ -3,7 +3,7 @@
   "id": "grip-editor",
   "title": "Grip Editor",
   "description": "Edit a Tool's Grip using Move and Rotate handles with configurable snap settings. Playtest only.",
-  "category": "Studio Tools",
+  "category": "Plugins",
   "method": "source",
   "source": "GripEditor.lua",
   "files": [

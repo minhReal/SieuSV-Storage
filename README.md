@@ -97,7 +97,7 @@ The website accepts either exact filename `SVS.json` or `svs.json`. Keep credent
 
 ### Option 2 — Website
 
-Use the **Upload** page on the [SieuSV Library website](https://minhreal.github.io/SieuSV-Storage/) to submit a community script. Sign in, add its title and description, choose **Source**, **Import** or **Both**, then publish. Website submissions are stored in the community library and do not need a GitHub folder or manifest.
+Use the **Upload** page on the [SieuSV Library website](https://sieu-sv-library-api.sieusv-storage-minhreal.workers.dev/) to submit a community script. Sign in, add its title and description, choose **Source**, **Import** or **Both**, then publish. Website submissions are stored in the community library and do not need a GitHub folder or manifest.
 
 ## Repository structure
 

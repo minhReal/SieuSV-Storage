@@ -200,7 +200,7 @@ async function handle(request,env){
   }catch{return json({error:"github_unavailable"},502)}
  }
 if(url.pathname.startsWith("/api/scripts/")&&url.pathname.includes("/versions")&&request.method==="GET"){
-  const parts=url.pathname.split("/");if((parts.length!==5&&parts.length!==6)||parts[1]!=="api"||parts[2]!=="scripts"||parts[4]!=="versions"||(parts.length===6&&!/^\\d+$/.test(parts[5])))return json({error:"invalid_version_path"},400);
+  const parts=url.pathname.split("/");if((parts.length!==5&&parts.length!==6)||parts[1]!=="api"||parts[2]!=="scripts"||parts[4]!=="versions"||(parts.length===6&&!/^[0-9]+$/.test(parts[5])))return json({error:"invalid_version_path"},400);
   const id=decodeURIComponent(parts[3]),versionNumber=parts.length===6?Number(parts[5]):null;if(!id||id.length>128)return json({error:"invalid_id"},400);
   try{const script=await env.DB.prepare("SELECT id FROM scripts WHERE id=? AND visibility='public' LIMIT 1").bind(id).first();if(!script)return json({error:"script_not_found"},404);
    if(versionNumber===null){const rows=await env.DB.prepare("SELECT v.version_number,v.title,v.changelog,v.created_at,u.username AS editor FROM script_versions v LEFT JOIN users u ON u.id=v.editor_user_id WHERE v.script_id=? ORDER BY v.version_number DESC LIMIT 50").bind(id).all();return json({versions:rows.results||[]})}

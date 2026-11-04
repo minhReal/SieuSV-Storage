@@ -175,6 +175,21 @@ async function handle(request,env){
   if(!["broken","unsafe","spam","copyright","other"].includes(reason))return json({error:"invalid_reason"},400);
   if(details.length<10||details.length>1000)return json({error:"invalid_details",message:"Details must contain 10 to 1000 characters."},400);
   if((!!scriptId)===(!!githubPath))return json({error:"invalid_target"},400);
+  const token=typeof body.turnstileToken==="string"?body.turnstileToken:"";
+  if(!env.TURNSTILE_SECRET_KEY)return json({error:"captcha_not_configured",message:"Report verification is temporarily unavailable."},503);
+  if(!token||token.length>2048)return json({error:"captcha_required",message:"Complete the CAPTCHA before submitting a report."},400);
+  let captcha;
+  try{
+   const response=await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify",{
+    method:"POST",
+    headers:{"content-type":"application/x-www-form-urlencoded"},
+    body:new URLSearchParams({secret:env.TURNSTILE_SECRET_KEY,response:token,remoteip:request.headers.get("CF-Connecting-IP")||""}),
+    signal:AbortSignal.timeout(10000)
+   });
+   if(!response.ok)return json({error:"captcha_unavailable",message:"CAPTCHA verification is temporarily unavailable. Try again."},503);
+   captcha=await response.json();
+  }catch{return json({error:"captcha_unavailable",message:"CAPTCHA verification is temporarily unavailable. Try again."},503)}
+  if(captcha.success!==true||captcha.hostname!==url.hostname||captcha.action!=="report")return json({error:"captcha_failed",message:"CAPTCHA verification failed. Please try again."},403);
   let title="",targetId=null,targetPath=null;
   if(scriptId){if(scriptId.length>128)return json({error:"invalid_id"},400);const target=await env.DB.prepare("SELECT id,title FROM scripts WHERE id=? AND visibility='public' LIMIT 1").bind(scriptId).first();if(!target)return json({error:"script_not_found"},404);title=target.title;targetId=scriptId}
   else{if(!safeManifestPath(githubPath))return json({error:"invalid_script_path"},400);try{const index=await githubIndex(request),target=index.records.find(x=>x.folder===githubPath);if(!target)return json({error:"script_not_found"},404);title=target.title;targetPath=target.folder}catch{return json({error:"github_unavailable"},502)}}

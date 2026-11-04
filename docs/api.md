@@ -67,7 +67,7 @@ Supported reasons:
 - {T}copyright{T}: copyright concern.
 - {T}other{T}: another review concern.
 
-Details must contain 10 to 1,000 characters. Sign-in is required. The server limits each account to five report attempts per rolling hour and rejects a duplicate open report for the same target within 24 hours.
+Details must contain 10 to 1,000 characters. Sign-in is required. The server limits each account to five report attempts per one-hour window and rejects a duplicate open report for the same target within 24 hours.
 
 A successful response is HTTP 201 and includes {T}ok{T}, a report ID and the initial {T}open{T} status. Report records are private to the service and are not exposed through the public API.
 

@@ -248,7 +248,7 @@ Sau khi PR được merge, website sẽ đọc manifest từ repository. Trang s
 
 Các trường chính:
 
-| Trường | Bắt buộc | Mô tả |
+| Classname | Bắt buộc | Mô tả |
 | --- | --- | --- |
 | `schema_version` | Khuyến nghị | Phiên bản cấu trúc manifest. Hiện dùng `1`. |
 | `id` | Khuyến nghị | ID duy nhất, viết thường, dùng chữ cái, số và dấu gạch ngang. |

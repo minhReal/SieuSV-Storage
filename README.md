@@ -316,11 +316,11 @@ SieuSV-Storage/
 
 Bạn có thể mở [GitHub Issue](https://github.com/minhReal/SieuSV-Storage/issues) để báo lỗi hoặc đề xuất tính năng, hoặc tạo Pull Request để đóng góp trực tiếp.
 
-Trước khi gửi thay đổi, hãy đọc [CONTRIBUTING.md](CONTRIBUTING.md)([CONTRIBUTING.md](CONTRIBUTING.md))`, hướng dẫn trong [docs/](docs/)([docs/](docs/))` và template tương ứng. Plugin độc lập do cộng tác viên tạo vẫn thuộc quyền của tác giả theo điều khoản giấy phép.
+Trước khi gửi thay đổi, hãy đọc [CONTRIBUTING.md](CONTRIBUTING.md), hướng dẫn trong [docs/](docs/) và template tương ứng. Plugin độc lập do cộng tác viên tạo vẫn thuộc quyền của tác giả theo điều khoản giấy phép.
 
 ### Giấy phép
 
-Repository sử dụng **SIEUSV Attribution License 1.0 (SAL-1.0)**. Đọc đầy đủ tại [LICENSE.md](LICENSE.md)([LICENSE.md](LICENSE.md))`.
+Repository sử dụng **SIEUSV Attribution License 1.0 (SAL-1.0)**. Đọc đầy đủ tại [LICENSE.md](LICENSE.md).
 
 Bạn có thể sử dụng, chỉnh sửa và thương mại hóa các sản phẩm phái sinh theo điều kiện của giấy phép, nhưng **phải ghi công tác giả gốc và dẫn liên kết trở lại dự án**.
 

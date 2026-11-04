@@ -231,7 +231,7 @@ if(url.pathname.startsWith("/api/scripts/")&&url.pathname.includes("/versions")&
   const rate=await env.DB.prepare("INSERT INTO upload_rate_limits (user_id,window_start,request_count) VALUES (?, ?, 1) ON CONFLICT(user_id) DO UPDATE SET request_count=CASE WHEN window_start<=?-3600 THEN 1 ELSE request_count+1 END,window_start=CASE WHEN window_start<=?-3600 THEN ? ELSE window_start END RETURNING request_count").bind(user.id,now,now,now,now).first();
   if(!rate||rate.request_count>5)return json({error:"rate_limited",message:"Upload limit reached. Try again later."},429,{"Retry-After":"3600"});
   const id=crypto.randomUUID();
-  try{await env.DB.prepare("INSERT INTO scripts (id,user_id,title,description,category,source,thumbnail_url,visibility,upload_method,import_parts) VALUES (?,?,?,?,?,?,?, 'public',?,?)").bind(id,user.id,title,description,category,source,thumbnail||null,uploadMethod,JSON.stringify(importParts)).run();return json({ok:true,id,url:origin+"/script?id="+encodeURIComponent(id)},201)}catch{return json({error:"database_error"},500)}
+  try{await env.DB.batch([env.DB.prepare("INSERT INTO scripts (id,user_id,title,description,category,source,thumbnail_url,visibility,upload_method,import_parts) VALUES (?,?,?,?,?,?,?, 'public',?,?)").bind(id,user.id,title,description,category,source,thumbnail||null,uploadMethod,JSON.stringify(importParts)),env.DB.prepare("INSERT INTO script_versions (id,script_id,version_number,title,description,category,source,thumbnail_url,upload_method,import_parts,changelog,editor_user_id) VALUES (?,?,1,?,?,?,?,?,?,?,?,?)").bind(crypto.randomUUID(),id,title,description,category,source,thumbnail||null,uploadMethod,JSON.stringify(importParts),"Initial release",user.id)]);return json({ok:true,id,url:origin+"/script?id="+encodeURIComponent(id),version_number:1},201)catch{return json({error:"database_error"},500)}
  }
  if(url.pathname.startsWith("/api/scripts/")&&url.pathname.endsWith("/vote")&&request.method==="POST"){
   const user=await currentUser(request,env);if(!user)return json({error:"unauthorized",message:"Sign in with Google to vote."},401);
@@ -249,23 +249,26 @@ if(url.pathname.startsWith("/api/scripts/")&&url.pathname.includes("/versions")&
  }
  if(url.pathname.startsWith("/api/scripts/")&&request.method==="PUT"){
   const user=await currentUser(request,env);if(!user)return json({error:"unauthorized"},401);
-  const id=decodeURIComponent(url.pathname.slice("/api/scripts/".length));if(!id||id.length>128)return json({error:"invalid_id"},400);
+  const id=decodeURIComponent(url.pathname.slice("/api/scripts/".length));if(!id||id.length>128||id.includes("/"))return json({error:"invalid_id"},400);
   let body;try{const size=Number(request.headers.get("content-length")||0);if(size>700000)return json({error:"payload_too_large"},413);const raw=await request.text();if(raw.length>700000)return json({error:"payload_too_large"},413);body=JSON.parse(raw)}catch{return json({error:"invalid_json"},400)}
-  const existing=await env.DB.prepare("SELECT upload_method,source,thumbnail_url,import_parts FROM scripts WHERE id=? AND user_id=? LIMIT 1").bind(id,user.id).first();if(!existing)return json({error:"script_not_found_or_forbidden"},404);
+  const existing=await env.DB.prepare("SELECT title,description,category,source,thumbnail_url,upload_method,import_parts FROM scripts WHERE id=? AND user_id=? LIMIT 1").bind(id,user.id).first();if(!existing)return json({error:"script_not_found_or_forbidden"},404);
   const title=String(body.title||"").trim().slice(0,80),description=String(body.description||"").trim().slice(0,500),category=String(body.category||"Other").trim().slice(0,40),uploadMethod=String(body.upload_method??existing.upload_method??"source"),source=String(body.source??existing.source??"");
-  let importParts=body.import_parts;
-  if(importParts===undefined){try{importParts=JSON.parse(existing.import_parts||"[]")}catch{importParts=[]}}
+  let importParts=body.import_parts;if(importParts===undefined){try{importParts=JSON.parse(existing.import_parts||"[]")}catch{importParts=[]}}
   if(!Array.isArray(importParts))return json({error:"invalid_import_parts"},400);
   if(!["source","import","both"].includes(uploadMethod))return json({error:"invalid_upload_method"},400);
   if(importParts.length>20||importParts.some(x=>typeof x!=="string"||!x.trim()||x.length>25000)||importParts.reduce((n,x)=>n+x.length,0)>200000)return json({error:"invalid_import_parts",message:"Import requires 1-20 non-empty parts, up to 25,000 characters each and 200,000 characters total."},400);
   if(title.length<2)return json({error:"invalid_title",message:"Title must contain 2 to 80 characters."},400);
   if(source.length>100000||(["source","both"].includes(uploadMethod)&&!source.trim()))return json({error:"invalid_source",message:"Source is required for Source and Both methods, up to 100000 characters."},400);
   if(uploadMethod==="import"||uploadMethod==="both"){if(!importParts.length)return json({error:"invalid_import_parts",message:"Add at least one String Import Part."},400)}else importParts=[];
-  let thumbnail=existing.thumbnail_url||"";
-  if(Object.prototype.hasOwnProperty.call(body,"thumbnail_url")&&body.thumbnail_url!==null)thumbnail=String(body.thumbnail_url||"").trim();
+  let thumbnail=existing.thumbnail_url||"";if(Object.prototype.hasOwnProperty.call(body,"thumbnail_url")&&body.thumbnail_url!==null)thumbnail=String(body.thumbnail_url||"").trim();
   if(thumbnail&&thumbnail.length>250000)return json({error:"invalid_thumbnail"},400);
   if(thumbnail&&!(/^https:\/\//i.test(thumbnail)&&thumbnail.length<=1000)&&!/^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/.test(thumbnail))return json({error:"invalid_thumbnail"},400);
-  try{const result=await env.DB.prepare("UPDATE scripts SET title=?,description=?,category=?,source=?,thumbnail_url=?,upload_method=?,import_parts=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND user_id=?").bind(title,description,category,source,thumbnail||null,uploadMethod,JSON.stringify(importParts),id,user.id).run();if(!result.meta?.changes)return json({error:"script_not_found_or_forbidden"},404);return json({ok:true,id,upload_method:uploadMethod,import_parts:importParts})}catch{return json({error:"database_error"},500)}
+  const maxRow=await env.DB.prepare("SELECT COALESCE(MAX(version_number),0) AS max_version FROM script_versions WHERE script_id=?").bind(id).first(),hasHistory=Number(maxRow?.max_version||0)>0,nextVersion=Number(maxRow?.max_version||0)+1,changelog=String(body.changelog||"").trim().slice(0,300)||"Updated script";
+  const commands=[];
+  if(!hasHistory)commands.push(env.DB.prepare("INSERT INTO script_versions (id,script_id,version_number,title,description,category,source,thumbnail_url,upload_method,import_parts,changelog,editor_user_id) VALUES (?,?,1,?,?,?,?,?,?,?,?,?)").bind(crypto.randomUUID(),id,existing.title,existing.description||"",existing.category||"Other",existing.source||"",existing.thumbnail_url||null,existing.upload_method||"source",existing.import_parts||"[]","History tracking started",user.id));
+  commands.push(env.DB.prepare("UPDATE scripts SET title=?,description=?,category=?,source=?,thumbnail_url=?,upload_method=?,import_parts=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND user_id=?").bind(title,description,category,source,thumbnail||null,uploadMethod,JSON.stringify(importParts),id,user.id));
+  commands.push(env.DB.prepare("INSERT INTO script_versions (id,script_id,version_number,title,description,category,source,thumbnail_url,upload_method,import_parts,changelog,editor_user_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)").bind(crypto.randomUUID(),id,nextVersion,title,description,category,source,thumbnail||null,uploadMethod,JSON.stringify(importParts),changelog,user.id));
+  try{const results=await env.DB.batch(commands);if(!results[hasHistory?0:1]?.meta?.changes)return json({error:"script_not_found_or_forbidden"},404);return json({ok:true,id,upload_method:uploadMethod,import_parts:importParts,version_number:nextVersion})}catch{return json({error:"database_error"},500)}
  }
  if(url.pathname.startsWith("/api/profile/")&&request.method==="GET"){
   const publicId=decodeURIComponent(url.pathname.slice("/api/profile/".length));if(!/^[a-f0-9]{16}$/.test(publicId))return json({error:"profile_not_found"},404);

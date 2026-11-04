@@ -11,6 +11,31 @@ function getCookie(req,name){return (req.headers.get("Cookie")||"").split(";").m
 async function sign(value,secret){const key=await crypto.subtle.importKey("raw",new TextEncoder().encode(secret),{name:"HMAC",hash:"SHA-256"},false,["sign"]);return b64u(await crypto.subtle.sign("HMAC",key,new TextEncoder().encode(value)))}
 async function makeSession(sub,secret){const payload=b64u(new TextEncoder().encode(JSON.stringify({sub,exp:Math.floor(Date.now()/1000)+604800})));return payload+"."+await sign(payload,secret)}
 function constantTimeEqual(a,b){if(typeof a!=="string"||typeof b!=="string"||a.length!==b.length)return false;let diff=0;for(let i=0;i<a.length;i++)diff|=a.charCodeAt(i)^b.charCodeAt(i);return diff===0}
+async function readJsonBody(request,maxBytes){
+ const declared=request.headers.get("content-length")||"";
+ if(/^\\d+$/.test(declared)&&Number(declared)>maxBytes)return {ok:false,error:"payload_too_large",status:413};
+ const reader=request.body?.getReader();
+ if(!reader)return {ok:false,error:"invalid_json",status:400};
+ const chunks=[];let total=0;
+ try{
+  while(true){
+   const part=await reader.read();
+   if(part.done)break;
+   total+=part.value.byteLength;
+   if(total>maxBytes){
+    try{await reader.cancel()}catch{}
+    return {ok:false,error:"payload_too_large",status:413};
+   }
+   chunks.push(part.value);
+  }
+  const bytes=new Uint8Array(total);let offset=0;
+  for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength}
+  const value=JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(bytes));
+  if(!value||typeof value!=="object"||Array.isArray(value))return {ok:false,error:"invalid_json",status:400};
+  return {ok:true,body:value};
+ }catch{return {ok:false,error:"invalid_json",status:400}}
+ finally{try{reader.releaseLock()}catch{}}
+}
 async function readSession(req,secret){try{const [p,s]=getCookie(req,COOKIE).split(".");if(!p||!s||!secret)return null;const expected=await sign(p,secret);if(!constantTimeEqual(s,expected))return null;const v=JSON.parse(new TextDecoder().decode(unb64u(p)));return v&&typeof v.sub==="string"&&v.exp>Date.now()/1000?v:null}catch{return null}}
 async function githubFile(path,request){
  if(!safeManifestPath(path)||path.length>500)return {status:400,source:null};
@@ -141,7 +166,7 @@ async function handle(request,env){
  if(url.pathname==="/api/me"&&request.method==="GET"){const user=await currentUser(request,env);if(user)delete user.id;return json({user})}
  if(url.pathname==="/api/me/profile"&&request.method==="POST"){
   const user=await currentUser(request,env);if(!user)return json({error:"unauthorized"},401);
-  let body;try{const size=Number(request.headers.get("content-length")||0);if(size>370000)return json({error:"payload_too_large",message:"Profile image is too large."},413);const raw=await request.text();if(raw.length>370000)return json({error:"payload_too_large",message:"Profile image is too large."},413);body=JSON.parse(raw)}catch{return json({error:"invalid_json"},400)}
+  const parsedBody=await readJsonBody(request,370000);if(!parsedBody.ok)return json({error:parsedBody.error,message:parsedBody.error==="payload_too_large"?"Profile image is too large.":undefined},parsedBody.status);const body=parsedBody.body;
   const username=String(body.username??user.username??"").trim().toLowerCase(),display=String(body.display_name??user.display_name??"").trim(),bio=String(body.bio??user.bio??"").trim(),avatar=String(body.avatar_url??user.avatar_url??"").trim();
   if(!/^[a-z0-9_]{3,32}$/.test(username))return json({error:"invalid_username",message:"Username must be 3-32 characters and use only lowercase letters, numbers or underscores."},400);
   if(display.length<1||display.length>40)return json({error:"invalid_display_name",message:"Display name must be 1-40 characters."},400);
@@ -170,7 +195,7 @@ async function handle(request,env){
  }
  if(url.pathname==="/api/reports"&&request.method==="POST"){
   const user=await currentUser(request,env);if(!user)return json({error:"unauthorized",message:"Sign in to submit a report."},401);
-  let body;try{const length=Number(request.headers.get("content-length")||0);if(length>6000)return json({error:"payload_too_large"},413);const raw=await request.text();if(raw.length>6000)return json({error:"payload_too_large"},413);body=JSON.parse(raw)}catch{return json({error:"invalid_json"},400)}
+  const parsedBody=await readJsonBody(request,6000);if(!parsedBody.ok)return json({error:parsedBody.error},parsedBody.status);const body=parsedBody.body;
   const reason=String(body.reason||"other"),details=String(body.details||"").trim(),scriptId=String(body.script_id||"").trim(),githubPath=String(body.github_path||"").trim();
   if(!["broken","unsafe","spam","copyright","other"].includes(reason))return json({error:"invalid_reason"},400);
   if(details.length<10||details.length>1000)return json({error:"invalid_details",message:"Details must contain 10 to 1000 characters."},400);
@@ -226,7 +251,7 @@ if(url.pathname.startsWith("/api/scripts/")&&url.pathname.includes("/versions")&
  if(url.pathname==="/api/scripts"&&request.method==="GET"){try{const q=(url.searchParams.get("q")||"").slice(0,100),viewer=await currentUser(request,env);const rows=await env.DB.prepare("SELECT s.id,s.title,s.description,s.category,s.thumbnail_url,s.created_at,s.updated_at,u.username,u.display_name,u.avatar_url,u.public_id,(SELECT COUNT(*) FROM script_votes v WHERE v.script_id=s.id AND v.vote='like') AS likes,(SELECT COUNT(*) FROM script_votes v WHERE v.script_id=s.id AND v.vote='dislike') AS dislikes,(SELECT v.vote FROM script_votes v WHERE v.script_id=s.id AND v.user_id=? LIMIT 1) AS my_vote FROM scripts s LEFT JOIN users u ON u.id=s.user_id WHERE s.visibility='public' AND (s.title LIKE ? OR s.description LIKE ?) ORDER BY s.created_at DESC LIMIT 100").bind(viewer?.id||null,"%"+q+"%","%"+q+"%").all();return json({scripts:rows.results||[]})}catch{return json({error:"database_error"},500)}}
  if(url.pathname==="/api/scripts"&&request.method==="POST"){
   const user=await currentUser(request,env);if(!user)return json({error:"unauthorized"},401);
-  let body;try{const size=Number(request.headers.get("content-length")||0);if(size>700000)return json({error:"payload_too_large"},413);const raw=await request.text();if(raw.length>700000)return json({error:"payload_too_large"},413);body=JSON.parse(raw)}catch{return json({error:"invalid_json"},400)}
+  const parsedBody=await readJsonBody(request,700000);if(!parsedBody.ok)return json({error:parsedBody.error},parsedBody.status);const body=parsedBody.body;
   const title=String(body.title||"").trim().slice(0,80),description=String(body.description||"").trim().slice(0,500),category=String(body.category||"Other").trim().slice(0,40),source=String(body.source||""),thumbnail=String(body.thumbnail_url||"").trim(),uploadMethod=String(body.upload_method||"source");
   let importParts=body.import_parts;
   if(!["source","import","both"].includes(uploadMethod))return json({error:"invalid_upload_method"},400);
@@ -237,11 +262,21 @@ if(url.pathname.startsWith("/api/scripts/")&&url.pathname.includes("/versions")&
   if(uploadMethod==="import"||uploadMethod==="both"){if(!importParts.length)return json({error:"invalid_import_parts",message:"Add at least one import part."},400)}else importParts=[];
   if(thumbnail&&thumbnail.length>250000)return json({error:"invalid_thumbnail",message:"Thumbnail image is too large."},400);
   if(thumbnail&&!(/^https:\/\//i.test(thumbnail)&&thumbnail.length<=1000)&&!/^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/.test(thumbnail))return json({error:"invalid_thumbnail",message:"Thumbnail must be an HTTPS URL or a supported uploaded image."},400);
-  if(env.TURNSTILE_SECRET_KEY){
-   const token=String(body.turnstileToken||"");if(!token||token.length>2048)return json({error:"captcha_required"},400);
-   const verify=await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify",{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body:new URLSearchParams({secret:env.TURNSTILE_SECRET_KEY,response:token,remoteip:request.headers.get("CF-Connecting-IP")||""})});
-   const result=await verify.json();if(!result.success||result.hostname!==url.hostname)return json({error:"captcha_failed"},403);
-  }
+  if(!env.TURNSTILE_SECRET_KEY)return json({error:"captcha_not_configured",message:"Upload verification is temporarily unavailable."},503);
+  const token=typeof body.turnstileToken==="string"?body.turnstileToken:"";
+  if(!token||token.length>2048)return json({error:"captcha_required"},400);
+  let captcha;
+  try{
+   const verify=await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify",{
+    method:"POST",
+    headers:{"content-type":"application/x-www-form-urlencoded"},
+    body:new URLSearchParams({secret:env.TURNSTILE_SECRET_KEY,response:token,remoteip:request.headers.get("CF-Connecting-IP")||""}),
+    signal:AbortSignal.timeout(10000)
+   });
+   if(!verify.ok)return json({error:"captcha_unavailable",message:"Upload verification is temporarily unavailable. Try again."},503);
+   captcha=await verify.json();
+  }catch{return json({error:"captcha_unavailable",message:"Upload verification is temporarily unavailable. Try again."},503)}
+  if(captcha.success!==true||captcha.hostname!==url.hostname||captcha.action!=="upload")return json({error:"captcha_failed"},403);
   const now=Math.floor(Date.now()/1000);
   const rate=await env.DB.prepare("INSERT INTO upload_rate_limits (user_id,window_start,request_count) VALUES (?, ?, 1) ON CONFLICT(user_id) DO UPDATE SET request_count=CASE WHEN window_start<=?-3600 THEN 1 ELSE request_count+1 END,window_start=CASE WHEN window_start<=?-3600 THEN ? ELSE window_start END RETURNING request_count").bind(user.id,now,now,now,now).first();
   if(!rate||rate.request_count>5)return json({error:"rate_limited",message:"Upload limit reached. Try again later."},429,{"Retry-After":"3600"});
@@ -251,7 +286,7 @@ if(url.pathname.startsWith("/api/scripts/")&&url.pathname.includes("/versions")&
  if(url.pathname.startsWith("/api/scripts/")&&url.pathname.endsWith("/vote")&&request.method==="POST"){
   const user=await currentUser(request,env);if(!user)return json({error:"unauthorized",message:"Sign in with Google to vote."},401);
   const id=decodeURIComponent(url.pathname.slice("/api/scripts/".length,-"/vote".length));if(!id||id.length>128)return json({error:"invalid_id"},400);
-  let body;try{const length=Number(request.headers.get("content-length")||0);if(length>1024)return json({error:"payload_too_large"},413);const raw=await request.text();if(raw.length>1024)return json({error:"payload_too_large"},413);body=JSON.parse(raw)}catch{return json({error:"invalid_json"},400)}
+  const parsedBody=await readJsonBody(request,1024);if(!parsedBody.ok)return json({error:parsedBody.error},parsedBody.status);const body=parsedBody.body;
   const vote=body.vote;if(vote!=="like"&&vote!=="dislike")return json({error:"invalid_vote"},400);
   const script=await env.DB.prepare("SELECT id FROM scripts WHERE id=? AND visibility='public' LIMIT 1").bind(id).first();if(!script)return json({error:"script_not_found"},404);
   const now=Math.floor(Date.now()/1000),voteRate=await env.DB.prepare("INSERT INTO vote_rate_limits (user_id,window_start,request_count) VALUES (?, ?, 1) ON CONFLICT(user_id) DO UPDATE SET request_count=CASE WHEN window_start<=?-3600 THEN 1 ELSE request_count+1 END,window_start=CASE WHEN window_start<=?-3600 THEN ? ELSE window_start END RETURNING request_count").bind(user.id,now,now,now,now).first();if(!voteRate||voteRate.request_count>60)return json({error:"vote_rate_limited",message:"Vote limit reached. Try again later."},429,{"Retry-After":"3600"});
@@ -265,7 +300,7 @@ if(url.pathname.startsWith("/api/scripts/")&&url.pathname.includes("/versions")&
  if(url.pathname.startsWith("/api/scripts/")&&request.method==="PUT"){
   const user=await currentUser(request,env);if(!user)return json({error:"unauthorized"},401);
   const id=decodeURIComponent(url.pathname.slice("/api/scripts/".length));if(!id||id.length>128||id.includes("/"))return json({error:"invalid_id"},400);
-  let body;try{const size=Number(request.headers.get("content-length")||0);if(size>700000)return json({error:"payload_too_large"},413);const raw=await request.text();if(raw.length>700000)return json({error:"payload_too_large"},413);body=JSON.parse(raw)}catch{return json({error:"invalid_json"},400)}
+  const parsedBody=await readJsonBody(request,700000);if(!parsedBody.ok)return json({error:parsedBody.error},parsedBody.status);const body=parsedBody.body;
   const existing=await env.DB.prepare("SELECT title,description,category,source,thumbnail_url,upload_method,import_parts FROM scripts WHERE id=? AND user_id=? LIMIT 1").bind(id,user.id).first();if(!existing)return json({error:"script_not_found_or_forbidden"},404);
   const title=String(body.title||"").trim().slice(0,80),description=String(body.description||"").trim().slice(0,500),category=String(body.category||"Other").trim().slice(0,40),uploadMethod=String(body.upload_method??existing.upload_method??"source"),source=String(body.source??existing.source??"");
   let importParts=body.import_parts;if(importParts===undefined){try{importParts=JSON.parse(existing.import_parts||"[]")}catch{importParts=[]}}

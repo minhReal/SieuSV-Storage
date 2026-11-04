@@ -47,6 +47,17 @@ Browse, inspect, copy or fork the source files here. The ready-to-use model is a
 
 Some tools are designed for playtesting only. Check each plugin's folder and README before installing it.
 
+## Library website
+
+The [SieuSV Library website](https://sieu-sv-library-api.sieusv-storage-minhreal.workers.dev/) combines GitHub scripts from this repository with public community uploads.
+
+- **Search and filters:** search by script name, creator, description or keyword; filter by category and source (GitHub or Community).
+- **Sorting:** browse by recently added, recently updated, most liked or title.
+- **Version history:** community uploads receive a version snapshot when first published and whenever the owner saves an update. The editor can add a changelog. GitHub entries show commits that changed the script folder.
+- **Reports:** signed-in users can report broken or misleading scripts, unsafe content, spam or copyright concerns. Reports are stored for review. Submissions are rate-limited and duplicate open reports are restricted.
+
+Review source code before using it. A report is a request for review, not a guarantee that content will be removed.
+
 ## Pull Request or Website
 
 There are two ways to submit a script to SieuSV-Storage.
@@ -150,54 +161,169 @@ You may use, modify and commercialize derivatives, but you **must credit the ori
 
 ### Giới thiệu
 
-**SieuSV-Storage** là kho lưu trữ mã nguồn Luau và metadata của **SIEUSV plugins**, hỗ trợ tạo và kiểm thử game Roblox bằng Studio Lite, kể cả trên điện thoại.
+**SieuSV-Storage** là repository lưu trữ mã nguồn Luau và metadata cho **SIEUSV plugins**. Các plugin được thiết kế để hỗ trợ xây dựng, chỉnh sửa và kiểm thử trải nghiệm Roblox bằng Studio Lite, bao gồm cả môi trường sử dụng trên điện thoại.
 
-Bạn có thể xem, đọc, sao chép hoặc fork mã nguồn tại đây. Model hoàn chỉnh có trên [Roblox Creator Store](https://create.roblox.com/store/asset/124980373269733/SIEUSV-plugins-BETA).
+Repository này là nơi lưu source code, manifest và tài liệu của từng plugin. Bạn có thể xem mã nguồn, sao chép, fork repository hoặc gửi đóng góp. Model đóng gói sẵn có trên [Roblox Creator Store](https://create.roblox.com/store/asset/124980373269733/SIEUSV-plugins-BETA).
 
-### Danh sách plugin
+### Danh sách plugin và script
 
-| Plugin | Chức năng |
-| --- | --- |
-| **Advanced Explorer** | Explorer và Properties trong lúc playtest. |
-| **Surface Preview** | Hiển thị trục X / Y / Z và bề mặt của part. |
-| **Weld** | Tạo weld và constraint cục bộ, giữ nguyên vị trí. *(Đang phát triển.)* |
-| **Grip Editor** | Chỉnh `Grip` của Tool bằng Move / Rotate. Chỉ dùng khi playtest. |
-| **Export-Import Plugin** | Xuất và nhập plugin bằng chuỗi code, có hướng dẫn EN/VN. |
-| **Open Chat** | Plugin SIEUSV dùng để bật / tắt giao diện chat Roblox. |
-| **Automatic Button Arrangement** | Tự động sắp xếp button trong scrolling grid. |
-| **Automatically Add UIStroke** | Tự thêm viền cho TextButton và ImageButton. |
-| **Draggable** | Kéo thả các panel plugin bằng cảm ứng hoặc chuột. |
+| Plugin / Script | Chức năng | Thư mục |
+| --- | --- | --- |
+| **Advanced Explorer** | Giao diện Explorer và Properties trong lúc playtest để kiểm tra Instance. | [Folder](<Studio Tools/Advanced Explorer>) |
+| **Surface Preview** | Hiển thị trục X / Y / Z và bề mặt của Part đang chọn. | [Folder](<Studio Tools/Surface Preview>) |
+| **Weld** | Chọn Part và tạo weld hoặc constraint được hỗ trợ mà vẫn giữ vị trí. *(Đang phát triển.)* | [Folder](<Studio Tools/Weld>) |
+| **Grip Editor** | Chỉnh thuộc tính `Grip` của Tool bằng tay nắm Move / Rotate và thiết lập snap. Chỉ dùng trong playtest. | [Folder](<Studio Tools/Grip Editor>) |
+| **Export-Import Plugin** | Xuất và nhập Instance của plugin bằng chuỗi code. Có hướng dẫn EN/VN. | [Folder](<Studio Tools/Export-Import Plugin>) |
+| **Open Chat** | Plugin SIEUSV dùng để bật hoặc tắt giao diện chat Roblox. Tag trên website là `Github`. | [Folder](<Sieu-SV Plugins/Open Chat>) |
+| **Automatic Button Arrangement** | Tự động sắp xếp button theo dạng scrolling grid. | [Folder](<Other/Automatic Button Arrangement>) |
+| **Automatically Add UIStroke** | Tự thêm outline cho TextButton và ImageButton. | [Folder](<Other/Automatically Add UIStroke>) |
+| **Draggable** | Thêm khả năng kéo thả bằng cảm ứng hoặc chuột cho các panel được hỗ trợ. | [Folder](<Other/Draggable>) |
 
-### Cách dùng
+### Cách sử dụng model trên Roblox
 
-1. Lấy asset ID từ [Roblox Creator Store](https://create.roblox.com/store/asset/124980373269733/SIEUSV-plugins-BETA).
-2. Vào playtest trong Studio Lite.
-3. Mở Toolbox, dán asset ID rồi chọn **Get**.
+1. Mở [Roblox Creator Store](https://create.roblox.com/store/asset/124980373269733/SIEUSV-plugins-BETA) và sao chép Asset ID.
+2. Tham gia một phiên playtest trong Studio Lite.
+3. Mở Toolbox, dán Asset ID rồi chọn **Get**.
 4. Tìm thư mục **Plugins** trong Workspace.
-5. Đọc hướng dẫn của từng plugin và đặt script vào đúng vị trí, thường là `StarterPlayer > StarterCharacterScripts`.
+5. Mở thư mục của plugin cần dùng và đọc README hoặc hướng dẫn đi kèm.
+6. Đặt từng Script / LocalScript vào đúng vị trí được hướng dẫn. Vị trí thường gặp là `StarterPlayer > StarterCharacterScripts`, nhưng không phải plugin nào cũng sử dụng vị trí này.
+7. Kiểm tra Output và thử chức năng trong môi trường playtest trước khi dùng trong dự án chính.
 
-Một số công cụ chỉ hoạt động trong playtest.
+Một số plugin phụ thuộc vào cấu trúc GUI, quyền truy cập hoặc môi trường playtest cụ thể. Không nên giả định mọi script đều hoạt động khi đặt ở cùng một vị trí.
 
-### Pull Request hoặc Website
+### Website SieuSV Library
 
-**Cách 1 — GitHub Pull Request**
+[SieuSV Library](https://sieu-sv-library-api.sieusv-storage-minhreal.workers.dev/) hiển thị script từ GitHub và script do cộng đồng đăng tải.
 
-1. Fork repository và tạo branch riêng.
-2. Đặt mỗi plugin hoặc script độc lập trong một thư mục thuộc nhóm phù hợp, ví dụ `Studio Tools/`, `Sieu-SV Plugins/` hoặc `Other/`.
-3. Thêm file **`SVS.json`** (hoặc **`svs.json`**) ở thư mục gốc của script đó.
-4. Thêm mã nguồn Luau và tài liệu liên quan vào cùng thư mục.
-5. Tạo Pull Request hướng đến branch `main`, kèm mô tả ngắn và các giới hạn cần biết.
+- **Tìm kiếm:** tìm theo tên script, tên người đăng, mô tả, category, tag hoặc từ khóa.
+- **Bộ lọc:** lọc theo category và nguồn đăng, gồm GitHub hoặc Community.
+- **Sắp xếp:** Recently added, Recently updated, Most liked hoặc Title A-Z.
+- **Version history:** script cộng đồng có snapshot mỗi lần phát hành và mỗi lần chủ sở hữu cập nhật. Người cập nhật có thể ghi changelog để mô tả thay đổi. Script GitHub hiển thị commit history của thư mục tương ứng.
+- **Report:** người dùng đã đăng nhập có thể gửi báo cáo về script bị lỗi, mô tả gây hiểu nhầm, nội dung không an toàn, spam hoặc vấn đề bản quyền. Báo cáo được lưu để kiểm tra; hệ thống giới hạn tần suất và ngăn gửi lặp báo cáo đang mở.
 
-Sau khi PR được merge, website đọc manifest và lịch sử GitHub. Trang script hiển thị thumbnail, mô tả và source code trực tiếp. Phần Information hiển thị tag, danh mục, phương thức tải, đường dẫn repository, contributor và lịch sử PR được thu gọn.
+Report chỉ là yêu cầu xem xét, không đồng nghĩa script sẽ tự động bị gỡ. Hãy đọc và kiểm tra source trước khi sử dụng.
 
-Manifest hỗ trợ các trường `id`, `title`, `description`, `category`, `tag`, `method`, `source`, `files`, `import_parts` và `thumbnail`. Dùng category `Plugins` cho plugin và `Other` cho tiện ích. Tag mặc định là `Github`, kể cả Open Chat. Đường dẫn trong manifest tính từ thư mục chứa file JSON.
+### Đóng góp bằng GitHub Pull Request hoặc Website
 
-**Cách 2 — Website**
+Có hai cách gửi script lên SieuSV-Storage.
 
-Mở trang [SieuSV Library](https://minhreal.github.io/SieuSV-Storage/), đăng nhập rồi dùng mục **Upload**. Chọn **Source**, **Import** hoặc **Both**, điền thông tin và đăng tải. Không cần tự tạo manifest khi upload qua website.
+#### Cách 1 — GitHub Pull Request
+
+1. Fork repository `minhReal/SieuSV-Storage`.
+2. Tạo branch riêng cho thay đổi của bạn để dễ quản lý nhiều thay đổi.
+3. Tạo một thư mục riêng cho mỗi plugin hoặc script độc lập trong category phù hợp, ví dụ `Studio Tools/`, `Sieu-SV Plugins/` hoặc `Other/`.
+4. Thêm file **`SVS.json`** hoặc **`svs.json`** vào thư mục gốc của script.
+5. Đặt source code Luau, file phụ trợ, thumbnail và hướng dẫn cần thiết trong cùng thư mục.
+6. Kiểm tra JSON hợp lệ, đường dẫn file đúng, không chứa token, mật khẩu, URL riêng tư hoặc thông tin cá nhân.
+7. Mở Pull Request và đặt base branch là **`main`**. Mô tả chức năng, cách cài đặt, kết quả test và giới hạn đã biết.
+8. Chờ maintainer review. Có thể cần sửa đổi trước khi PR được merge.
+
+Sau khi PR được merge, website sẽ đọc manifest từ repository. Trang script có thể hiển thị thumbnail, mô tả, source code, category, tag, phương thức upload, đường dẫn thư mục GitHub, contributor và lịch sử Pull Request.
+
+#### Định dạng `SVS.json`
+
+Đường dẫn trong manifest được tính tương đối từ thư mục đang chứa file JSON. Dùng JSON hợp lệ, key và string phải có dấu ngoặc kép, không thêm dấu phẩy ở phần tử cuối.
+
+```json
+{
+  "schema_version": 1,
+  "id": "my-script",
+  "title": "My Script",
+  "description": "What the script does.",
+  "category": "Plugins",
+  "tag": "Github",
+  "method": "source",
+  "source": "Main.lua",
+  "files": [
+    { "path": "Main.lua", "role": "main" },
+    { "path": "Helper.lua", "role": "helper" }
+  ],
+  "import_parts": [],
+  "thumbnail": null
+}
+```
+
+Các trường chính:
+
+| Trường | Bắt buộc | Mô tả |
+| --- | --- | --- |
+| `schema_version` | Khuyến nghị | Phiên bản cấu trúc manifest. Hiện dùng `1`. |
+| `id` | Khuyến nghị | ID duy nhất, viết thường, dùng chữ cái, số và dấu gạch ngang. |
+| `title` | Khuyến nghị | Tên hiển thị của script. |
+| `description` | Không | Mô tả ngắn về chức năng. |
+| `category` | Không | Category hiển thị. Dùng `Plugins` cho plugin và `Other` cho tiện ích. |
+| `tag` | Không | Tag tùy chỉnh. Mặc định là `Github` nếu bỏ trống. |
+| `method` | Không | `source`, `import` hoặc `both`. Mặc định là `source`. |
+| `source` | Theo method | Đường dẫn tới file Lua/Luau chính khi dùng `source` hoặc `both`. |
+| `files` | Khuyến nghị | Danh sách file source và file phụ. Mỗi phần tử có `path` và `role`. |
+| `import_parts` | Theo method | Danh sách đường dẫn file String Import khi dùng `import` hoặc `both`. |
+| `thumbnail` | Không | Đường dẫn ảnh tương đối. Dùng `null` nếu không có ảnh riêng. |
+
+- Website chấp nhận chính xác tên file `SVS.json` hoặc `svs.json`.
+- `method: "source"` cần `source` trỏ tới file Luau chính.
+- `method: "import"` cần ít nhất một file trong `import_parts`.
+- `method: "both"` cần cả source và import parts.
+- Mỗi đường dẫn phải trỏ đến file thực sự tồn tại trong repository và nằm trong thư mục script.
+- `files` có thể dùng role như `main`, `helper`, `documentation`, `button` hoặc `manifest`.
+- Nếu không khai báo thumbnail hợp lệ, website sẽ sử dụng ảnh mặc định `thumDefault.jpg`.
+- Không đưa secret, access token, mật khẩu, thông tin cá nhân hoặc mã nguồn không có quyền chia sẻ vào repository.
+
+#### Cách 2 — Đăng tải bằng Website
+
+1. Mở [SieuSV Library](https://sieu-sv-library-api.sieusv-storage-minhreal.workers.dev/).
+2. Đăng nhập bằng Google.
+3. Mở mục **Upload**.
+4. Nhập title, description, category và thumbnail nếu cần.
+5. Chọn **Source**, **Import** hoặc **Both** tùy nội dung.
+6. Dán source code hoặc các String Import Part tương ứng, kiểm tra thông tin rồi đăng tải.
+
+Script đăng bằng website được lưu trong Community Library và không cần tạo thư mục GitHub hay file manifest. Chủ sở hữu có thể chỉnh sửa script và ghi changelog ở lần cập nhật tiếp theo.
+
+### Cấu trúc repository
+
+```text
+SieuSV-Storage/
+├── .github/
+│   ├── ISSUE_TEMPLATE/
+│   │   └── bug_report.md
+│   └── PULL_REQUEST_TEMPLATE.md
+├── docs/
+│   ├── README.md
+│   ├── manifest.md
+│   └── api.md
+├── Studio Tools/
+│   ├── Advanced Explorer/
+│   ├── Export-Import Plugin/
+│   ├── Grip Editor/
+│   ├── Surface Preview/
+│   └── Weld/
+├── Other/
+│   ├── Automatic Button Arrangement/
+│   ├── Automatically Add UIStroke/
+│   └── Draggable/
+├── Sieu-SV Plugins/
+│   └── Open Chat/
+├── website/
+├── CONTRIBUTING.md
+├── LICENSE.md
+└── README.md
+```
+
+### Đóng góp và báo lỗi
+
+Bạn có thể mở [GitHub Issue](https://github.com/minhReal/SieuSV-Storage/issues) để báo lỗi hoặc đề xuất tính năng, hoặc tạo Pull Request để đóng góp trực tiếp.
+
+Trước khi gửi thay đổi, hãy đọc ``CONTRIBUTING.md`(CONTRIBUTING.md)`, hướng dẫn trong ``docs/`(docs/)` và template tương ứng. Plugin độc lập do cộng tác viên tạo vẫn thuộc quyền của tác giả theo điều khoản giấy phép.
 
 ### Giấy phép
 
-Theo **SIEUSV Attribution License 1.0 (SAL-1.0)** — xem [`LICENSE.md`](LICENSE.md). Bạn phải ghi công tác giả gốc và dẫn link về dự án.
+Repository sử dụng **SIEUSV Attribution License 1.0 (SAL-1.0)**. Đọc đầy đủ tại ``LICENSE.md`(LICENSE.md)`.
+
+Bạn có thể sử dụng, chỉnh sửa và thương mại hóa các sản phẩm phái sinh theo điều kiện của giấy phép, nhưng **phải ghi công tác giả gốc và dẫn liên kết trở lại dự án**.
+
+### Credits
+
+- **minh152680 / minhminhminh6736** — [YouTube](https://www.youtube.com/@minh15268O)
+- **Ba K gang** — [Roblox Group](https://www.roblox.com/communities/434674101/Ba-K-gang#!/about)
 
 </details>

@@ -13,7 +13,7 @@ async function makeSession(sub,secret){const payload=b64u(new TextEncoder().enco
 function constantTimeEqual(a,b){if(typeof a!=="string"||typeof b!=="string"||a.length!==b.length)return false;let diff=0;for(let i=0;i<a.length;i++)diff|=a.charCodeAt(i)^b.charCodeAt(i);return diff===0}
 async function readJsonBody(request,maxBytes){
  const declared=request.headers.get("content-length")||"";
- if(/^\\d+$/.test(declared)&&Number(declared)>maxBytes)return {ok:false,error:"payload_too_large",status:413};
+ if(/^\d+$/.test(declared)&&Number(declared)>maxBytes)return {ok:false,error:"payload_too_large",status:413};
  const reader=request.body?.getReader();
  if(!reader)return {ok:false,error:"invalid_json",status:400};
  const chunks=[];let total=0;

@@ -142,7 +142,7 @@ SieuSV-Storage/
 
 ## Contributing
 
-Found a bug or want to add a plugin? Open an **Issue** or a **Pull Request**. Independent plugins you add remain the property of their creators (see the license).
+Found a bug or want to add a plugin? Open an [**Issue**](https://github.com/minhReal/SieuSV-Storage/issues) or a **Pull Request** against `main`. Read [`CONTRIBUTING.md`](CONTRIBUTING.md) for the workflow and review checklist, and see [`docs/`](docs/) for the manifest and API references. Independent plugins you add remain the property of their creators (see the license).
 
 ## License
 

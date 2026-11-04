@@ -27,15 +27,15 @@ Browse, inspect, copy or fork the source files here. The ready-to-use model is a
 
 | Plugin | Description | Files |
 | --- | --- | --- |
-| **Advanced Explorer** | In-game Explorer and Properties interface for playtesting. | [Folder](<Studio Tools/Advanced Explorer>) |
-| **Surface Preview** | Displays the X / Y / Z axes and surfaces of a selected part. | [Folder](<Studio Tools/Surface Preview>) |
-| **Weld** | Select parts and create local welds and supported constraints while preserving positions. *(WIP.)* | [Folder](<Studio Tools/Weld>) |
-| **Grip Editor** | Edit a Tool's `Grip` with Move / Rotate handles and snap settings. Playtest only. | [Folder](<Studio Tools/Grip Editor>) |
-| **Export-Import Plugin** | Export and import plugin instances as code strings. Includes EN/VN guides. | [Folder](<Studio Tools/Export-Import Plugin>) |
-| **Open Chat** | A SIEUSV plugin that toggles the Roblox chat interface. Its website tag is `Github`. | [Folder](<Sieu-SV Plugins/Open Chat>) |
-| **Automatic Button Arrangement** | Automatically arranges buttons in a scrolling grid. | [Folder](<Other/Automatic Button Arrangement>) |
-| **Automatically Add UIStroke** | Adds outlines to TextButtons and ImageButtons. | [Folder](<Other/Automatically Add UIStroke>) |
-| **Draggable** | Adds touch and mouse dragging to supported plugin panels. | [Folder](<Other/Draggable>) |
+| **Advanced Explorer** | In-game Explorer and Properties interface for playtesting. | [Folder](Studio%20Tools/Advanced%20Explorer) |
+| **Surface Preview** | Displays the X / Y / Z axes and surfaces of a selected part. | [Folder](Studio%20Tools/Surface%20Preview) |
+| **Weld** | Select parts and create local welds and supported constraints while preserving positions. *(WIP.)* | [Folder](Studio%20Tools/Weld) |
+| **Grip Editor** | Edit a Tool's `Grip` with Move / Rotate handles and snap settings. Playtest only. | [Folder](Studio%20Tools/Grip%20Editor) |
+| **Export-Import Plugin** | Export and import plugin instances as code strings. Includes EN/VN guides. | [Folder](Studio%20Tools/Export-Import%20Plugin) |
+| **Open Chat** | A SIEUSV plugin that toggles the Roblox chat interface. Its website tag is `Github`. | [Folder](Sieu-SV%20Plugins/Open%20Chat) |
+| **Automatic Button Arrangement** | Automatically arranges buttons in a scrolling grid. | [Folder](Other/Automatic%20Button%20Arrangement) |
+| **Automatically Add UIStroke** | Adds outlines to TextButtons and ImageButtons. | [Folder](Other/Automatically%20Add%20UIStroke) |
+| **Draggable** | Adds touch and mouse dragging to supported plugin panels. | [Folder](Other/Draggable) |
 
 ## How to use
 
@@ -172,15 +172,15 @@ Repository này là nơi lưu source code, manifest và tài liệu của từng
 
 | Plugin / Script | Chức năng | Thư mục |
 | --- | --- | --- |
-| **Advanced Explorer** | Giao diện Explorer và Properties trong lúc playtest để kiểm tra Instance. | [Folder](<Studio Tools/Advanced Explorer>) |
-| **Surface Preview** | Hiển thị trục X / Y / Z và bề mặt của Part đang chọn. | [Folder](<Studio Tools/Surface Preview>) |
-| **Weld** | Chọn Part và tạo weld hoặc constraint được hỗ trợ mà vẫn giữ vị trí. *(Đang phát triển.)* | [Folder](<Studio Tools/Weld>) |
-| **Grip Editor** | Chỉnh thuộc tính `Grip` của Tool bằng tay nắm Move / Rotate và thiết lập snap. Chỉ dùng trong playtest. | [Folder](<Studio Tools/Grip Editor>) |
-| **Export-Import Plugin** | Xuất và nhập Instance của plugin bằng chuỗi code. Có hướng dẫn EN/VN. | [Folder](<Studio Tools/Export-Import Plugin>) |
-| **Open Chat** | Plugin SIEUSV dùng để bật hoặc tắt giao diện chat Roblox. Tag trên website là `Github`. | [Folder](<Sieu-SV Plugins/Open Chat>) |
-| **Automatic Button Arrangement** | Tự động sắp xếp button theo dạng scrolling grid. | [Folder](<Other/Automatic Button Arrangement>) |
-| **Automatically Add UIStroke** | Tự thêm outline cho TextButton và ImageButton. | [Folder](<Other/Automatically Add UIStroke>) |
-| **Draggable** | Thêm khả năng kéo thả bằng cảm ứng hoặc chuột cho các panel được hỗ trợ. | [Folder](<Other/Draggable>) |
+| **Advanced Explorer** | Giao diện Explorer và Properties trong lúc playtest để kiểm tra Instance. | [Thư mục](Studio%20Tools/Advanced%20Explorer) |
+| **Surface Preview** | Hiển thị trục X / Y / Z và bề mặt của Part đang chọn. | [Thư mục](Studio%20Tools/Surface%20Preview) |
+| **Weld** | Chọn Part và tạo weld hoặc constraint được hỗ trợ mà vẫn giữ vị trí. *(Đang phát triển.)* | [Thư mục](Studio%20Tools/Weld) |
+| **Grip Editor** | Chỉnh thuộc tính `Grip` của Tool bằng tay nắm Move / Rotate và thiết lập snap. Chỉ dùng trong playtest. | [Thư mục](Studio%20Tools/Grip%20Editor) |
+| **Export-Import Plugin** | Xuất và nhập Instance của plugin bằng chuỗi code. Có hướng dẫn EN/VN. | [Thư mục](Studio%20Tools/Export-Import%20Plugin) |
+| **Open Chat** | Plugin SIEUSV dùng để bật hoặc tắt giao diện chat Roblox. Tag trên website là `Github`. | [Thư mục](Sieu-SV%20Plugins/Open%20Chat) |
+| **Automatic Button Arrangement** | Tự động sắp xếp button theo dạng scrolling grid. | [Thư mục](Other/Automatic%20Button%20Arrangement) |
+| **Automatically Add UIStroke** | Tự thêm outline cho TextButton và ImageButton. | [Thư mục](Other/Automatically%20Add%20UIStroke) |
+| **Draggable** | Thêm khả năng kéo thả bằng cảm ứng hoặc chuột cho các panel được hỗ trợ. | [Thư mục](Other/Draggable) |
 
 ### Cách sử dụng model trên Roblox
 

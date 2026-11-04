@@ -6,20 +6,20 @@ Before starting, read the [repository README](README.md), [documentation index](
 
 ## Ways to contribute
 
-- **GitHub Pull Request:** add or update repository files and submit a PR against {T}main{T}.
+- **GitHub Pull Request:** add or update repository files and submit a PR against `main`.
 - **Website upload:** publish a Community script from the website's Upload page. This does not require a repository manifest.
 - **Issue:** report a reproducible bug or suggest an improvement using the repository's issue template.
 
 ## Adding a GitHub script
 
-1. Fork {T}minhReal/SieuSV-Storage{T}.
+1. Fork `minhReal/SieuSV-Storage`.
 2. Create a focused branch for your change.
-3. Add a dedicated folder under {T}Studio Tools/{T}, {T}Sieu-SV Plugins/{T} or {T}Other/{T}, as appropriate.
-4. Add {T}SVS.json{T} or {T}svs.json{T} at the script folder root.
+3. Add a dedicated folder under `Studio Tools/`, `Sieu-SV Plugins/` or `Other/`, as appropriate.
+4. Add `SVS.json` or `svs.json` at the script folder root.
 5. Add the source files and any required documentation or assets.
 6. Validate all manifest paths and confirm every listed file exists.
 7. Test the script in its intended Roblox/Studio Lite environment.
-8. Open a Pull Request with base branch {T}main{T} and complete the PR template.
+8. Open a Pull Request with base branch `main` and complete the PR template.
 
 See [Manifest Reference](docs/manifest.md) for the supported schema and upload methods.
 
@@ -42,12 +42,12 @@ When changing the website or Worker:
 - Keep server-side validation for every client-submitted value.
 - Use prepared D1 statements for values and do not concatenate user input into SQL.
 - Keep private report data and account identifiers out of public responses.
-- Update the matching files under {T}docs/{T} when API or manifest behavior changes.
+- Update the matching files under `docs/` when API or manifest behavior changes.
 - Test GitHub and Community script pages, signed-in and signed-out states, and narrow/mobile layouts.
 
 ## Pull Request checklist
 
-- [ ] The PR targets {T}main{T}.
+- [ ] The PR targets `main`.
 - [ ] The title describes the change.
 - [ ] The description explains the purpose and user-visible impact.
 - [ ] New or changed manifests are valid JSON and all paths exist.

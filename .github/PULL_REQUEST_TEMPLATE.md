@@ -20,8 +20,8 @@ Describe what you tested, including device, Studio Lite/Roblox version, browser 
 
 ## Checklist
 
-- [ ] This PR targets {T}main{T}.
-- [ ] New or changed {T}SVS.json{T} manifests are valid JSON.
+- [ ] This PR targets `main`.
+- [ ] New or changed `SVS.json` manifests are valid JSON.
 - [ ] Every manifest file path exists and remains inside its script folder.
 - [ ] Source code and assets are mine or I have permission to redistribute them.
 - [ ] No secrets, passwords, tokens, private URLs or personal information are included.

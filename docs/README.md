@@ -13,14 +13,14 @@ For contribution workflow and review expectations, see [CONTRIBUTING.md](../CONT
 
 SieuSV-Storage has two content sources:
 
-1. **GitHub scripts** live in this repository. Each script folder contains an {T}SVS.json{T} or {T}svs.json{T} manifest and the files listed by that manifest.
+1. **GitHub scripts** live in this repository. Each script folder contains an `SVS.json` or `svs.json` manifest and the files listed by that manifest.
 2. **Community scripts** are submitted through the website. Their metadata and source are stored in the existing Cloudflare D1 database.
 
 The existing Cloudflare Worker serves the website, handles authentication and API requests, reads the GitHub manifest tree, and connects to D1. The website does not create a second backend.
 
 ### GitHub content flow
 
-{F}text
+```text
 GitHub main branch
   └─ category/script-folder/
       ├─ SVS.json
@@ -32,13 +32,13 @@ Worker reads the repository tree and manifests
 Validated metadata appears in /api/github/scripts
           ↓
 Script page loads only files listed in the manifest
-{F}
+```
 
 The Worker caches the manifest index and individual source files. A script's GitHub version history is based on commits that changed its folder.
 
 ### Community content flow
 
-{F}text
+```text
 Signed-in creator
   └─ Upload or edit a public script
        ↓
@@ -49,7 +49,7 @@ D1 stores script metadata and content
 A script_versions snapshot is stored
        ↓
 Website displays the current version and history
-{F}
+```
 
 Every new community upload receives an initial version snapshot. Every successful owner update creates another snapshot and stores the supplied changelog. Existing scripts without snapshots start their history when they are first edited after this feature is enabled.
 

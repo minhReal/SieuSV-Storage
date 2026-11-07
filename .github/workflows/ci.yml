@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Check Worker syntax
+        run: node --input-type=module --check < website/worker.js
+
+      - name: Validate Wrangler JSONC
+        run: node -e "JSON.parse(require('node:fs').readFileSync('website/wrangler.jsonc', 'utf8'))"
+
+      - name: Validate D1 schema
+        run: |
+          python - <<'PY'
+          import sqlite3
+          from pathlib import Path
+
+          conn = sqlite3.connect(":memory:")
+          conn.executescript(Path("website/schema.sql").read_text(encoding="utf-8"))
+          tables = {
+              row[0]
+              for row in conn.execute(
+                  "SELECT name FROM sqlite_master WHERE type='table'"
+              )
+          }
+          required = {
+              "users", "scripts", "likes", "reports", "script_versions",
+              "script_votes", "profile_rate_limits", "report_rate_limits",
+              "upload_rate_limits", "vote_rate_limits", "username_history"
+          }
+          missing = required - tables
+          assert not missing, f"Missing tables: {sorted(missing)}"
+          columns = {
+              row[1] for row in conn.execute("PRAGMA table_info(users)")
+          }
+          assert "session_version" in columns, "users.session_version is missing"
+          print("D1 schema OK")
+          PY
+
+      - name: Check committed whitespace errors
+        run: git show --check --format=oneline HEAD

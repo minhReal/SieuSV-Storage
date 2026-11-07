@@ -14,7 +14,7 @@ Before starting, read the [repository README](README.md), [documentation index](
 
 1. Fork `minhReal/SieuSV-Storage`.
 2. Create a focused branch for your change.
-3. Add a dedicated folder under `Studio Tools/`, `Sieu-SV Plugins/` or `Other/`, as appropriate.
+3. Add a dedicated folder under `Sieu-SV Plugins/` or `Other/`, as appropriate.
 4. Add `SVS.json` or `svs.json` at the script folder root.
 5. Add the source files and any required documentation or assets.
 6. Validate all manifest paths and confirm every listed file exists.

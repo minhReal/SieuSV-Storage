@@ -27,11 +27,11 @@ Browse, inspect, copy or fork the source files here. The ready-to-use model is a
 
 | Plugin | Description | Files |
 | --- | --- | --- |
-| **Advanced Explorer** | In-game Explorer and Properties interface for playtesting. | [Folder](Studio%20Tools/Advanced%20Explorer) |
-| **Surface Preview** | Displays the X / Y / Z axes and surfaces of a selected part. | [Folder](Studio%20Tools/Surface%20Preview) |
-| **Weld** | Select parts and create local welds and supported constraints while preserving positions. *(WIP.)* | [Folder](Studio%20Tools/Weld) |
-| **Grip Editor** | Edit a Tool's `Grip` with Move / Rotate handles and snap settings. Playtest only. | [Folder](Studio%20Tools/Grip%20Editor) |
-| **Export-Import Plugin** | Export and import plugin instances as code strings. Includes EN/VN guides. | [Folder](Studio%20Tools/Export-Import%20Plugin) |
+| **Advanced Explorer** | In-game Explorer and Properties interface for playtesting. | [Folder](Sieu-SV%20Plugins/Advanced%20Explorer) |
+| **Surface Preview** | Displays the X / Y / Z axes and surfaces of a selected part. | [Folder](Sieu-SV%20Plugins/Surface%20Preview) |
+| **Weld** | Select parts and create local welds and supported constraints while preserving positions. *(WIP.)* | [Folder](Sieu-SV%20Plugins/Weld) |
+| **Grip Editor** | Edit a Tool's `Grip` with Move / Rotate handles and snap settings. Playtest only. | [Folder](Sieu-SV%20Plugins/Grip%20Editor) |
+| **Export-Import Plugin** | Export and import plugin instances as code strings. Includes EN/VN guides. | [Folder](Sieu-SV%20Plugins/Export-Import%20Plugin) |
 | **Open Chat** | A SIEUSV plugin that toggles the Roblox chat interface. Its website tag is `Github`. | [Folder](Sieu-SV%20Plugins/Open%20Chat) |
 | **Automatic Button Arrangement** | Automatically arranges buttons in a scrolling grid. | [Folder](Other/Automatic%20Button%20Arrangement) |
 | **Automatically Add UIStroke** | Adds outlines to TextButtons and ImageButtons. | [Folder](Other/Automatically%20Add%20UIStroke) |
@@ -64,7 +64,7 @@ There are two ways to submit a script to SieuSV-Storage.
 ### Option 1 — Pull Request (GitHub)
 
 1. Fork this repository and create a branch.
-2. Put each plugin or standalone script in its own folder under an appropriate category, such as `Studio Tools/`, `Sieu-SV Plugins/` or `Other/`.
+2. Put each plugin or standalone script in its own folder under an appropriate category, such as `Sieu-SV Plugins/` or `Other/`.
 3. Add a **`SVS.json`** file (or **`svs.json`**) at the root of that script folder.
 4. Add the Luau source files and any supporting documentation to the same folder.
 5. Open a Pull Request against `main`. Include a short summary and note any playtest or platform limitations.
@@ -122,18 +122,17 @@ SieuSV-Storage/
 │   ├── manifest.md
 │   ├── api.md
 │   └── legal-readiness.md
-├── Studio Tools/
-│   ├── Advanced Explorer/
-│   ├── Export-Import Plugin/
-│   ├── Grip Editor/
-│   ├── Surface Preview/
-│   └── Weld/
 ├── Other/
 │   ├── Automatic Button Arrangement/
 │   ├── Automatically Add UIStroke/
 │   └── Draggable/
 ├── Sieu-SV Plugins/
-│   └── Open Chat/
+│   ├── Advanced Explorer/
+│   ├── Export-Import Plugin/
+│   ├── Grip Editor/
+│   ├── Open Chat/
+│   ├── Surface Preview/
+│   └── Weld/
 ├── website/
 │   └── migrations/
 │       └── 0002_session_version.sql
@@ -174,11 +173,11 @@ Repository này là nơi lưu source code, manifest và tài liệu của từng
 
 | Plugin / Script | Chức năng | Thư mục |
 | --- | --- | --- |
-| **Advanced Explorer** | Giao diện Explorer và Properties trong lúc playtest để kiểm tra Instance. | [Thư mục](Studio%20Tools/Advanced%20Explorer) |
-| **Surface Preview** | Hiển thị trục X / Y / Z và bề mặt của Part đang chọn. | [Thư mục](Studio%20Tools/Surface%20Preview) |
-| **Weld** | Chọn Part và tạo weld hoặc constraint được hỗ trợ mà vẫn giữ vị trí. *(Đang phát triển.)* | [Thư mục](Studio%20Tools/Weld) |
-| **Grip Editor** | Chỉnh thuộc tính `Grip` của Tool bằng tay nắm Move / Rotate và thiết lập snap. Chỉ dùng trong playtest. | [Thư mục](Studio%20Tools/Grip%20Editor) |
-| **Export-Import Plugin** | Xuất và nhập Instance của plugin bằng chuỗi code. Có hướng dẫn EN/VN. | [Thư mục](Studio%20Tools/Export-Import%20Plugin) |
+| **Advanced Explorer** | Giao diện Explorer và Properties trong lúc playtest để kiểm tra Instance. | [Thư mục](Sieu-SV%20Plugins/Advanced%20Explorer) |
+| **Surface Preview** | Hiển thị trục X / Y / Z và bề mặt của Part đang chọn. | [Thư mục](Sieu-SV%20Plugins/Surface%20Preview) |
+| **Weld** | Chọn Part và tạo weld hoặc constraint được hỗ trợ mà vẫn giữ vị trí. *(Đang phát triển.)* | [Thư mục](Sieu-SV%20Plugins/Weld) |
+| **Grip Editor** | Chỉnh thuộc tính `Grip` của Tool bằng tay nắm Move / Rotate và thiết lập snap. Chỉ dùng trong playtest. | [Thư mục](Sieu-SV%20Plugins/Grip%20Editor) |
+| **Export-Import Plugin** | Xuất và nhập Instance của plugin bằng chuỗi code. Có hướng dẫn EN/VN. | [Thư mục](Sieu-SV%20Plugins/Export-Import%20Plugin) |
 | **Open Chat** | Plugin SIEUSV dùng để bật hoặc tắt giao diện chat Roblox. Tag trên website là `Github`. | [Thư mục](Sieu-SV%20Plugins/Open%20Chat) |
 | **Automatic Button Arrangement** | Tự động sắp xếp button theo dạng scrolling grid. | [Thư mục](Other/Automatic%20Button%20Arrangement) |
 | **Automatically Add UIStroke** | Tự thêm outline cho TextButton và ImageButton. | [Thư mục](Other/Automatically%20Add%20UIStroke) |
@@ -214,7 +213,7 @@ Có hai cách gửi script lên SieuSV-Storage.
 
 1. Fork repository `minhReal/SieuSV-Storage`.
 2. Tạo branch riêng cho thay đổi của bạn để dễ quản lý nhiều thay đổi.
-3. Tạo một thư mục riêng cho mỗi plugin hoặc script độc lập trong category phù hợp, ví dụ `Studio Tools/`, `Sieu-SV Plugins/` hoặc `Other/`.
+3. Tạo một thư mục riêng cho mỗi plugin hoặc script độc lập trong category phù hợp, ví dụ `Sieu-SV Plugins/` hoặc `Other/`.
 4. Thêm file **`SVS.json`** hoặc **`svs.json`** vào thư mục gốc của script.
 5. Đặt source code Luau, file phụ trợ, thumbnail và hướng dẫn cần thiết trong cùng thư mục.
 6. Kiểm tra JSON hợp lệ, đường dẫn file đúng, không chứa token, mật khẩu, URL riêng tư hoặc thông tin cá nhân.
@@ -287,18 +286,17 @@ SieuSV-Storage/
 │   ├── README.md
 │   ├── manifest.md
 │   └── api.md
-├── Studio Tools/
-│   ├── Advanced Explorer/
-│   ├── Export-Import Plugin/
-│   ├── Grip Editor/
-│   ├── Surface Preview/
-│   └── Weld/
 ├── Other/
 │   ├── Automatic Button Arrangement/
 │   ├── Automatically Add UIStroke/
 │   └── Draggable/
 ├── Sieu-SV Plugins/
-│   └── Open Chat/
+│   ├── Advanced Explorer/
+│   ├── Export-Import Plugin/
+│   ├── Grip Editor/
+│   ├── Open Chat/
+│   ├── Surface Preview/
+│   └── Weld/
 ├── website/
 ├── CONTRIBUTING.md
 ├── LICENSE.md

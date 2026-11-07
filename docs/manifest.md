@@ -34,7 +34,7 @@ The filename must be exactly `SVS.json` or `svs.json`. Place it at the root of t
 | `id` | Recommended | Stable unique identifier, lowercase letters, digits and hyphens. |
 | `title` | Recommended | Display name in the library. |
 | `description` | No | Short description. |
-| `category` | No | Display category. Use `Plugins` for plugins and `Other` for utilities. Legacy `Studio Tools` values are displayed as `Plugins`. |
+| `category` | No | Display category. Use `Plugins` for plugins and `Other` for utilities. |
 | `tag` | No | Custom display tag. Defaults to `Github`. |
 | `method` | No | `source`, `import` or `both`; defaults to `source`. |
 | `source` | Conditional | Relative path to the main Lua/Luau file for `source` or `both`. |

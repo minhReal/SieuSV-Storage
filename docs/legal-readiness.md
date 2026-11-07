@@ -45,9 +45,13 @@ Read: [Law 91/2025/QH15](https://vanban.chinhphu.vn/?classid=1&docid=214590&page
 
 ## Could there be a fine?
 
-Administrative sanctions exist for violations of applicable cybersecurity and personal-data obligations. Whether a particular fine applies depends on the operator, legal classification, the conduct and dates, data types, impact, exemptions, mitigating/aggravating facts and the competent authority's findings. A public GitHub repository by itself does not prove a violation, and this review cannot calculate or predict a fine.
+Administrative sanctions exist for violations of applicable cybersecurity and personal-data obligations. Decree 330/2026/ND-CP, which covers administrative sanctions in cybersecurity and personal-data protection, is in force from 19 August 2026. Decree 363/2026/ND-CP on administrative sanctions in the data sector is scheduled to take effect on **11 November 2026**; as of this review date (7 November 2026), it is not yet in force. Its commencement and transitional provisions should be checked before relying on it.
+
+Whether a particular fine applies depends on the operator, legal classification, the conduct and dates, data types, impact, exemptions, mitigating/aggravating facts and the competent authority's findings. A public GitHub repository by itself does not prove a violation, and this review cannot calculate or predict a fine.
 
 Do not assume that pausing the site removes obligations for past processing. Keep a factual record of the feature history, providers, data categories, dates and the read-only change. Ask a qualified Vietnamese lawyer or the competent authority to assess whether any past filing or remediation is needed.
+
+Official texts: [Decree 330/2026/ND-CP](https://vanban.chinhphu.vn/?classid=0&docid=219266&pageid=27160) and [Decree 363/2026/ND-CP](https://vanban.chinhphu.vn/?classid=1&docid=219598&pageid=27160).
 
 ## Other jurisdictions to consider
 

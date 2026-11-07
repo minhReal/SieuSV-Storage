@@ -49,14 +49,13 @@ Some tools are designed for playtesting only. Check each plugin's folder and REA
 
 ## Library website
 
-The [SieuSV Library website](https://sieu-sv-library-api.sieusv-storage-minhreal.workers.dev/) combines GitHub scripts from this repository with public community uploads.
+The [SieuSV Library website](https://sieu-sv-library-api.sieusv-storage-minhreal.workers.dev/) is currently in **read-only mode** while its community and privacy requirements are reviewed. It serves curated scripts from this repository.
 
-- **Search and filters:** search by script name, creator, description or keyword; filter by category and source (GitHub or Community).
-- **Sorting:** browse by recently added, recently updated, most liked or title.
-- **Version history:** community uploads receive a version snapshot when first published and whenever the owner saves an update. The editor can add a changelog. GitHub entries show commits that changed the script folder.
-- **Reports:** signed-in users can report broken or misleading scripts, unsafe content, spam or copyright concerns. Reports are stored for review. Submissions are rate-limited and duplicate open reports are restricted.
+- **Search and filters:** search GitHub script names, descriptions and keywords, then filter by category.
+- **Source inspection:** open a script page to inspect its Luau source and repository information.
+- **Version history:** GitHub entries show commits that changed the script folder.
 
-Review source code before using it. A report is a request for review, not a guarantee that content will be removed.
+Google sign-in, community profiles, uploads, edits, votes and reports are temporarily disabled. Existing community records have not been deleted, but the website does not expose them while the pause is active. Review source code and applicable licenses before using or redistributing it.
 
 ## Pull Request or Website
 
@@ -108,7 +107,7 @@ The website accepts either exact filename `SVS.json` or `svs.json`. Keep credent
 
 ### Option 2 — Website
 
-Use the **Upload** page on the [SieuSV Library website](https://sieu-sv-library-api.sieusv-storage-minhreal.workers.dev/) to submit a community script. Sign in, add its title and description, choose **Source**, **Import** or **Both**, then publish. Website submissions are stored in the community library and do not need a GitHub folder or manifest.
+Website uploads are **temporarily paused**. Use the GitHub Pull Request process above to propose a script. The website will remain read-only until its legal, privacy and security requirements have been reviewed.
 
 ## Repository structure
 
@@ -121,7 +120,8 @@ SieuSV-Storage/
 ├── docs/
 │   ├── README.md
 │   ├── manifest.md
-│   └── api.md
+│   ├── api.md
+│   └── legal-readiness.md
 ├── Studio Tools/
 │   ├── Advanced Explorer/
 │   ├── Export-Import Plugin/
@@ -135,6 +135,8 @@ SieuSV-Storage/
 ├── Sieu-SV Plugins/
 │   └── Open Chat/
 ├── website/
+│   └── migrations/
+│       └── 0002_session_version.sql
 ├── CONTRIBUTING.md
 ├── LICENSE.md
 └── README.md
@@ -196,15 +198,13 @@ Một số plugin phụ thuộc vào cấu trúc GUI, quyền truy cập hoặc 
 
 ### Website SieuSV Library
 
-[SieuSV Library](https://sieu-sv-library-api.sieusv-storage-minhreal.workers.dev/) hiển thị script từ GitHub và script do cộng đồng đăng tải.
+[SieuSV Library](https://sieu-sv-library-api.sieusv-storage-minhreal.workers.dev/) hiện đang ở **chế độ chỉ đọc** trong thời gian rà soát yêu cầu pháp lý, quyền riêng tư và bảo mật. Website chỉ hiển thị các script đã được tuyển chọn từ repository này.
 
-- **Tìm kiếm:** tìm theo tên script, tên người đăng, mô tả, category, tag hoặc từ khóa.
-- **Bộ lọc:** lọc theo category và nguồn đăng, gồm GitHub hoặc Community.
-- **Sắp xếp:** Recently added, Recently updated, Most liked hoặc Title A-Z.
-- **Version history:** script cộng đồng có snapshot mỗi lần phát hành và mỗi lần chủ sở hữu cập nhật. Người cập nhật có thể ghi changelog để mô tả thay đổi. Script GitHub hiển thị commit history của thư mục tương ứng.
-- **Report:** người dùng đã đăng nhập có thể gửi báo cáo về script bị lỗi, mô tả gây hiểu nhầm, nội dung không an toàn, spam hoặc vấn đề bản quyền. Báo cáo được lưu để kiểm tra; hệ thống giới hạn tần suất và ngăn gửi lặp báo cáo đang mở.
+- **Tìm kiếm:** tìm tên, mô tả và từ khóa của script GitHub, sau đó lọc theo category.
+- **Xem source:** mở trang script để kiểm tra mã nguồn Luau và thông tin repository.
+- **Lịch sử phiên bản:** script GitHub hiển thị các commit đã thay đổi thư mục tương ứng.
 
-Report chỉ là yêu cầu xem xét, không đồng nghĩa script sẽ tự động bị gỡ. Hãy đọc và kiểm tra source trước khi sử dụng.
+Đăng nhập Google, hồ sơ cộng đồng, upload, chỉnh sửa, bình chọn và gửi report hiện tạm thời bị tắt. Dữ liệu cộng đồng cũ chưa bị xóa, nhưng website không còn hiển thị chúng khi chế độ tạm dừng đang bật. Hãy kiểm tra source và giấy phép liên quan trước khi sử dụng hoặc phân phối lại.
 
 ### Đóng góp bằng GitHub Pull Request hoặc Website
 
@@ -271,16 +271,9 @@ Các trường chính:
 - Nếu không khai báo thumbnail hợp lệ, website sẽ sử dụng ảnh mặc định `thumDefault.jpg`.
 - Không đưa secret, access token, mật khẩu, thông tin cá nhân hoặc mã nguồn không có quyền chia sẻ vào repository.
 
-#### Cách 2 — Đăng tải bằng Website
+#### Cách 2 — Website
 
-1. Mở [SieuSV Library](https://sieu-sv-library-api.sieusv-storage-minhreal.workers.dev/).
-2. Đăng nhập bằng Google.
-3. Mở mục **Upload**.
-4. Nhập title, description, category và thumbnail nếu cần.
-5. Chọn **Source**, **Import** hoặc **Both** tùy nội dung.
-6. Dán source code hoặc các String Import Part tương ứng, kiểm tra thông tin rồi đăng tải.
-
-Script đăng bằng website được lưu trong Community Library và không cần tạo thư mục GitHub hay file manifest. Chủ sở hữu có thể chỉnh sửa script và ghi changelog ở lần cập nhật tiếp theo.
+Chức năng upload qua website hiện **tạm thời bị tắt**. Hãy dùng quy trình GitHub Pull Request ở trên để đề xuất script. Website sẽ duy trì chế độ chỉ đọc cho đến khi các yêu cầu pháp lý, quyền riêng tư và bảo mật được rà soát.
 
 ### Cấu trúc repository
 

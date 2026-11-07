@@ -9,7 +9,7 @@ const unb64u=s=>Uint8Array.from(atob(s.replace(/-/g,"+").replace(/_/g,"/")+"=".r
 const cookie=(name,value,maxAge)=>name+"="+value+"; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age="+maxAge;
 function getCookie(req,name){return (req.headers.get("Cookie")||"").split(";").map(x=>x.trim()).find(x=>x.startsWith(name+"="))?.slice(name.length+1)||""}
 async function sign(value,secret){const key=await crypto.subtle.importKey("raw",new TextEncoder().encode(secret),{name:"HMAC",hash:"SHA-256"},false,["sign"]);return b64u(await crypto.subtle.sign("HMAC",key,new TextEncoder().encode(value)))}
-async function makeSession(sub,secret){const payload=b64u(new TextEncoder().encode(JSON.stringify({sub,exp:Math.floor(Date.now()/1000)+604800})));return payload+"."+await sign(payload,secret)}
+async function makeSession(sub,secret,version=0){const payload=b64u(new TextEncoder().encode(JSON.stringify({sub,exp:Math.floor(Date.now()/1000)+604800,ver:Number.isSafeInteger(Number(version))&&Number(version)>=0?Number(version):0})));return payload+"."+await sign(payload,secret)}
 function constantTimeEqual(a,b){if(typeof a!=="string"||typeof b!=="string"||a.length!==b.length)return false;let diff=0;for(let i=0;i<a.length;i++)diff|=a.charCodeAt(i)^b.charCodeAt(i);return diff===0}
 async function readJsonBody(request,maxBytes){
  const declared=request.headers.get("content-length")||"";
@@ -36,7 +36,7 @@ async function readJsonBody(request,maxBytes){
  }catch{return {ok:false,error:"invalid_json",status:400}}
  finally{try{reader.releaseLock()}catch{}}
 }
-async function readSession(req,secret){try{const [p,s]=getCookie(req,COOKIE).split(".");if(!p||!s||!secret)return null;const expected=await sign(p,secret);if(!constantTimeEqual(s,expected))return null;const v=JSON.parse(new TextDecoder().decode(unb64u(p)));return v&&typeof v.sub==="string"&&v.exp>Date.now()/1000?v:null}catch{return null}}
+async function readSession(req,secret){try{const [p,s]=getCookie(req,COOKIE).split(".");if(!p||!s||!secret)return null;const expected=await sign(p,secret);if(!constantTimeEqual(s,expected))return null;const v=JSON.parse(new TextDecoder().decode(unb64u(p)));if(!v||typeof v.sub!=="string"||v.exp<=Date.now()/1000)return null;const ver=v.ver===undefined?0:v.ver;if(!Number.isSafeInteger(ver)||ver<0)return null;return {...v,ver}}catch{return null}}
 async function githubFile(path,request){
  if(!safeManifestPath(path)||path.length>500)return {status:400,source:null};
  const cacheKey=new Request(new URL("/__github_cache_v4/"+encodeURIComponent(path),request.url));
@@ -129,7 +129,7 @@ async function githubIndex(request){
  return result;
 }
 
-async function currentUser(req,env){const session=await readSession(req,env.gg_secret);if(!session)return null;return await env.DB.prepare("SELECT id,public_id,username,display_name,avatar_url,bio,created_at,username_updated_at FROM users WHERE google_sub=? LIMIT 1").bind(session.sub).first()}
+async function currentUser(req,env){const session=await readSession(req,env.gg_secret);if(!session)return null;const user=await env.DB.prepare("SELECT id,public_id,username,display_name,avatar_url,bio,created_at,username_updated_at,session_version FROM users WHERE google_sub=? LIMIT 1").bind(session.sub).first();if(!user||Number(user.session_version||0)!==session.ver)return null;return user}
 async function handle(request,env){
  const url=new URL(request.url),origin=SITE;
  if((request.method==="POST"||request.method==="PUT")&&(["/auth/logout","/api/me/profile","/api/scripts","/api/reports"].includes(url.pathname)||(request.method==="POST"&&/^\/api\/scripts\/[^/]+\/vote$/.test(url.pathname))||(request.method==="PUT"&&url.pathname.startsWith("/api/scripts/")))){
@@ -154,16 +154,16 @@ async function handle(request,env){
   const userRes=await fetch("https://www.googleapis.com/oauth2/v3/userinfo",{headers:{authorization:"Bearer "+token.access_token}});
   const profile=await userRes.json();
   if(!userRes.ok||!profile.sub||!profile.email_verified)return new Response("Google account could not be verified.",{status:401});
-  const old=await env.DB.prepare("SELECT id,public_id,username FROM users WHERE google_sub=? LIMIT 1").bind(profile.sub).first();
+  const old=await env.DB.prepare("SELECT id,public_id,username,session_version FROM users WHERE google_sub=? LIMIT 1").bind(profile.sub).first();
   let username=old?.username;
   if(!username){const base=(profile.email.split("@")[0]||"user").toLowerCase().replace(/[^a-z0-9_]/g,"").slice(0,20)||"user";username=base+"_"+crypto.randomUUID().slice(0,6)}
   const id=old?.id||profile.sub;
   await env.DB.prepare("INSERT INTO users (id,google_sub,username,display_name,avatar_url,public_id) VALUES (?,?,?,?,?,?) ON CONFLICT(google_sub) DO NOTHING").bind(id,profile.sub,username,profile.name||username,profile.picture||"",old?.public_id||crypto.randomUUID().replaceAll("-","").slice(0,16)).run();
-  const session=await makeSession(profile.sub,env.gg_secret);
+  const session=await makeSession(profile.sub,env.gg_secret,Number(old?.session_version||0));
   const headers=new Headers({Location:origin+"/?login=success","Cache-Control":"no-store"});headers.append("Set-Cookie",cookie(COOKIE,session,604800));headers.append("Set-Cookie",cookie(STATE_COOKIE,"",0));return new Response(null,{status:302,headers});
  }
- if(url.pathname==="/auth/logout"&&request.method==="POST")return json({ok:true},200,{"Set-Cookie":cookie(COOKIE,"",0)});
- if(url.pathname==="/api/me"&&request.method==="GET"){const user=await currentUser(request,env);if(user)delete user.id;return json({user})}
+ if(url.pathname==="/auth/logout"&&request.method==="POST"){const session=await readSession(request,env.gg_secret);if(session)await env.DB.prepare("UPDATE users SET session_version=COALESCE(session_version,0)+1 WHERE google_sub=?").bind(session.sub).run();return json({ok:true},200,{"Set-Cookie":cookie(COOKIE,"",0)})}
+ if(url.pathname==="/api/me"&&request.method==="GET"){const user=await currentUser(request,env);if(user){delete user.id;delete user.session_version}return json({user})}
  if(url.pathname==="/api/me/profile"&&request.method==="POST"){
   const user=await currentUser(request,env);if(!user)return json({error:"unauthorized"},401);
   const parsedBody=await readJsonBody(request,370000);if(!parsedBody.ok)return json({error:parsedBody.error,message:parsedBody.error==="payload_too_large"?"Profile image is too large.":undefined},parsedBody.status);const body=parsedBody.body;
@@ -185,7 +185,7 @@ async function handle(request,env){
    if(usernameChanged){await env.DB.batch([env.DB.prepare("INSERT INTO username_history (user_id,username,changed_at) VALUES (?,?,?)").bind(user.id,row.username,now),env.DB.prepare("UPDATE users SET username=?,display_name=?,bio=?,avatar_url=?,username_updated_at=?,display_name_updated_at=CASE WHEN ? THEN ? ELSE display_name_updated_at END WHERE id=?").bind(username,display,bio,avatar,now,displayChanged?1:0,now,user.id)]);}
    else{await env.DB.prepare("UPDATE users SET display_name=?,bio=?,avatar_url=?,display_name_updated_at=CASE WHEN ? THEN ? ELSE display_name_updated_at END WHERE id=?").bind(display,bio,avatar,displayChanged?1:0,now,user.id).run();}
   }catch{return json({error:"username_taken",message:"That username is already in use. Choose another one."},409)}
-  const updatedUser=await currentUser(request,env);if(updatedUser)delete updatedUser.id;return json({ok:true,user:updatedUser});
+  const updatedUser=await currentUser(request,env);if(updatedUser){delete updatedUser.id;delete updatedUser.session_version}return json({ok:true,user:updatedUser});
  }
  if(url.pathname==="/api/health"){let database=false;try{await env.DB.prepare("SELECT 1").first();database=true}catch{}return json({ok:true,service:"Sieu-Sv_Library API",database})}
  

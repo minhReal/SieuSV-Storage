@@ -3,6 +3,7 @@ const SITE="https://sieu-sv-library-api.sieusv-storage-minhreal.workers.dev";
 const PAGES_ORIGIN="https://minhreal.github.io";
 const COOKIE="ssv_session";
 const STATE_COOKIE="ssv_oauth_state";
+const COMMUNITY_FEATURES_ENABLED=false;
 const json=(data,status=200,headers={})=>new Response(JSON.stringify(data),{status,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store",...headers}});
 const b64u=b=>btoa(String.fromCharCode(...new Uint8Array(b))).replace(/=/g,"").replaceAll("+","-").replaceAll("/","_");
 const unb64u=s=>Uint8Array.from(atob(s.replace(/-/g,"+").replace(/_/g,"/")+"=".repeat((4-s.length%4)%4)),c=>c.charCodeAt(0));
@@ -132,6 +133,13 @@ async function githubIndex(request){
 async function currentUser(req,env){const session=await readSession(req,env.gg_secret);if(!session)return null;const user=await env.DB.prepare("SELECT id,public_id,username,display_name,avatar_url,bio,created_at,username_updated_at,session_version FROM users WHERE google_sub=? LIMIT 1").bind(session.sub).first();if(!user||Number(user.session_version||0)!==session.ver)return null;return user}
 async function handle(request,env){
  const url=new URL(request.url),origin=SITE;
+ if(!COMMUNITY_FEATURES_ENABLED){
+  const path=url.pathname;
+  if(path==="/api/me"&&request.method==="GET")return json({user:null});
+  if(path==="/api/scripts"&&request.method==="GET")return json({scripts:[]});
+  if(path==="/profile"||path.startsWith("/profile/"))return new Response(null,{status:302,headers:{Location:origin+"/","Cache-Control":"no-store"}});
+  if(path==="/auth/google"||path==="/auth/google/callback"||path==="/api/me/profile"||path==="/api/reports"||path==="/api/scripts"||path.startsWith("/api/scripts/")||path.startsWith("/api/profile/"))return json({error:"community_paused",message:"Community accounts, uploads, profiles, votes and reports are temporarily paused. GitHub-hosted scripts remain available."},503,{"Retry-After":"86400"});
+ }
  if((request.method==="POST"||request.method==="PUT")&&(["/auth/logout","/api/me/profile","/api/scripts","/api/reports"].includes(url.pathname)||(request.method==="POST"&&/^\/api\/scripts\/[^/]+\/vote$/.test(url.pathname))||(request.method==="PUT"&&url.pathname.startsWith("/api/scripts/")))){
   if(request.headers.get("Origin")!==url.origin||request.headers.get("Sec-Fetch-Site")==="cross-site")return json({error:"csrf_rejected"},403);
   if(url.pathname!=="/auth/logout"&&!/^application\/json(?:\s*;|$)/i.test(request.headers.get("content-type")||""))return json({error:"json_required"},415);

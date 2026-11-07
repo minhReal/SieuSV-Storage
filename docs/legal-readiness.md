@@ -28,7 +28,9 @@ If the authority classifies the former service as a domestic social network, Dec
 
 The site used a workers.dev hostname and the repository does not evidence a Vietnamese legal entity, license or notification confirmation, local infrastructure, designated moderation personnel or all required operational records. This is why community features have been paused pending advice.
 
-Read: [Decree 147/2024/ND-CP — Government legal document portal](https://vanban.chinhphu.vn/?docid=211654&pageid=27160).
+Also review Law 116/2025/QH15 on Cybersecurity, effective 1 July 2026, and its implementing instruments, including Decree 333/2026/ND-CP. Their application depends on the operator, system classification and actual services; this checklist does not decide that classification.
+
+Read: [Decree 147/2024/ND-CP — Government legal document portal](https://vanban.chinhphu.vn/?docid=211654&pageid=27160), [Law 116/2025/QH15](https://vanban.chinhphu.vn/?docid=216000&pageid=27160), and [Decree 333/2026/ND-CP](https://vanban.chinhphu.vn/?docid=219244&pageid=27160).
 
 ## Viet Nam: personal data and cross-border processing
 

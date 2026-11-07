@@ -137,7 +137,7 @@ async function handle(request,env){
   const path=url.pathname;
   if(path==="/api/me"&&request.method==="GET")return json({user:null});
   if(path==="/api/scripts"&&request.method==="GET")return json({scripts:[]});
-  if(path==="/profile"||path.startsWith("/profile/"))return new Response(null,{status:302,headers:{Location:origin+"/","Cache-Control":"no-store"}});
+  if(path==="/profile"||path.startsWith("/profile/")||path==="/upload"||path==="/settings")return new Response(null,{status:302,headers:{Location:origin+"/","Cache-Control":"no-store"}});
   if(path==="/auth/google"||path==="/auth/google/callback"||path==="/api/me/profile"||path==="/api/reports"||path==="/api/scripts"||path.startsWith("/api/scripts/")||path.startsWith("/api/profile/"))return json({error:"community_paused",message:"Community accounts, uploads, profiles, votes and reports are temporarily paused. GitHub-hosted scripts remain available."},503,{"Retry-After":"86400"});
  }
  if((request.method==="POST"||request.method==="PUT")&&(["/auth/logout","/api/me/profile","/api/scripts","/api/reports"].includes(url.pathname)||(request.method==="POST"&&/^\/api\/scripts\/[^/]+\/vote$/.test(url.pathname))||(request.method==="PUT"&&url.pathname.startsWith("/api/scripts/")))){

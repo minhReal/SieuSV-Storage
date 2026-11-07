@@ -82,6 +82,7 @@ Official texts: [Decree 330/2026/ND-CP](https://vanban.chinhphu.vn/?classid=0&do
 - [x] `website/schema.sql` synchronized with the live application tables and indexes.
 - [x] GitHub Actions CI checks Worker syntax, Wrangler config and D1 schema.
 - [x] CodeQL analysis workflow added for JavaScript/TypeScript.
+- [x] Persistent Worker request logs are not enabled during this pause; adding telemetry should follow a documented purpose, retention period and privacy notice rather than silently collecting more request metadata.
 - [ ] Legal classification and any required licensing/notification confirmed by qualified counsel/authority.
 - [ ] Personal-data and cross-border impact-assessment duties confirmed and completed where required.
 - [ ] Retention schedule, private rights-request channel, deletion/export workflow and moderation process implemented.

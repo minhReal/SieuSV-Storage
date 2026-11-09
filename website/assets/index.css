@@ -37,3 +37,14 @@ body{position:relative;isolation:isolate;background:var(--bg)}body::after{conten
 .registrationActions{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:#080808;border:1px solid #303030;padding:14px 18px}
 .registrationActions p{font-size:12px;max-width:360px}
 @media(max-width:520px){.registrationActions{align-items:stretch;flex-direction:column}.registrationActions>div{display:flex;gap:8px}.registrationActions button{flex:1}}
+
+.brand{display:flex;align-items:center;gap:9px}.brandLogo{width:30px;height:30px;object-fit:contain;display:block}
+.deleteAccountPanel{margin-top:20px;padding:16px;border:1px solid #633131;background:#140909;display:grid;gap:10px}
+.deleteAccountPanel h3{margin:0;color:#ffb1b1;font-size:16px}
+.deleteAccountPanel p{margin:0;color:#d5c2c2;font-size:13px;line-height:1.6}
+.deleteAccountPanel .deleteActions{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.deleteAccountPanel .dangerButton{border:1px solid #a34a4a;background:#5b1717;color:#fff}
+.deleteAccountPanel .dangerButton:disabled{opacity:.45;cursor:not-allowed}
+.deleteAccountPanel input{max-width:320px;width:100%;background:#050505;border:1px solid #555;color:#fff;padding:11px;border-radius:6px;font:inherit}
+.deleteAccountPanel input:focus{outline:2px solid #a34a4a;outline-offset:2px}
+.deleteAccountPanel .deleteStatus{min-height:1.3em;color:#ffb1b1}

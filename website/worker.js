@@ -239,7 +239,10 @@ async function handle(request,env){
   const state=b64u(crypto.getRandomValues(new Uint8Array(32))),ticket=await makeDeleteStateTicket(session.sub,session.ver,state,env.gg_secret);
   const google=new URL("https://accounts.google.com/o/oauth2/v2/auth");
   google.search=new URLSearchParams({client_id:env.GOOGLE_CLIENT_ID,redirect_uri:origin+"/auth/google/callback",response_type:"code",scope:"openid email profile",state,access_type:"online",prompt:"select_account"}).toString();
-  return json({url:google.toString()},200,{"Set-Cookie":cookie(DELETE_STATE_COOKIE,ticket,600)});
+  const headers=new Headers({"content-type":"application/json; charset=utf-8","cache-control":"no-store"});
+  headers.append("Set-Cookie",cookie(DELETE_STATE_COOKIE,ticket,600));
+  headers.append("Set-Cookie",cookie(DELETE_CONFIRM_COOKIE,"",0));
+  return new Response(JSON.stringify({url:google.toString()}),{status:200,headers});
  }
  if(url.pathname==="/auth/delete/cancel"&&request.method==="POST"){
   const headers=new Headers({"content-type":"application/json; charset=utf-8","cache-control":"no-store"});
@@ -280,7 +283,7 @@ async function handle(request,env){
   const state=url.searchParams.get("state")||"",deleteCookie=getCookie(request,DELETE_STATE_COOKIE),deleteState=await readDeleteStateTicket(request,env.gg_secret);
   if(deleteCookie){
    const session=await readSession(request,env.gg_secret),code=url.searchParams.get("code");
-   const fail=reason=>{const headers=new Headers({Location:origin+"/?delete="+reason,"Cache-Control":"no-store"});headers.append("Set-Cookie",cookie(DELETE_STATE_COOKIE,"",0));return new Response(null,{status:302,headers})};
+   const fail=reason=>{const headers=new Headers({Location:origin+"/?delete="+reason,"Cache-Control":"no-store"});headers.append("Set-Cookie",cookie(DELETE_STATE_COOKIE,"",0));headers.append("Set-Cookie",cookie(DELETE_CONFIRM_COOKIE,"",0));return new Response(null,{status:302,headers})};
    if(!deleteState||deleteState.state!==state||!session||session.sub!==deleteState.sub||session.ver!==deleteState.ver)return fail("reauth_failed");
    if(!code)return fail(url.searchParams.get("error")==="access_denied"?"cancelled":"reauth_failed");
    let tokenRes,token,userRes,profile;

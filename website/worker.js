@@ -208,7 +208,7 @@ async function handle(request,env){
   const updatedUser=await currentUser(request,env);if(updatedUser){delete updatedUser.id;delete updatedUser.session_version}return json({ok:true,user:updatedUser});
  }
  if(url.pathname==="/api/health"){let database=false;try{await env.DB.prepare("SELECT 1").first();database=true}catch{}return json({ok:true,service:"Sieu-Sv_Library API",database})}
- 
+
  if(url.pathname==="/api/github/script/history"&&request.method==="GET"){
   const folder=url.searchParams.get("path")||"";if(!safeManifestPath(folder))return json({error:"invalid_script_path"},400);
   try{const index=await githubIndex(request),record=index.records.find(x=>x.folder===folder);if(!record)return json({error:"script_not_found"},404);const commits=await githubApi("https://api.github.com/repos/"+REPO+"/commits?path="+encodeURIComponent(record.folder)+"/&per_page=12");if(!Array.isArray(commits))return json({error:"github_history_unavailable"},502);return json({versions:commits.map(c=>({sha:c.sha,message:String(c.commit?.message||"Repository update").slice(0,1000),date:c.commit?.author?.date||c.commit?.committer?.date||null,author:c.author?.login||c.commit?.author?.name||"contributor",url:c.html_url})).filter(x=>x.url)},200,{"Cache-Control":"public, max-age=120"})}catch{return json({error:"github_unavailable"},502)}

@@ -23,8 +23,11 @@ jobs:
         with:
           node-version: 22
 
-      - name: Check Worker syntax
-        run: node --input-type=module --check < website/worker.js
+      - name: Check Worker and browser JavaScript syntax
+        run: |
+          node --input-type=module --check < website/worker.js
+          node --check website/assets/index.js
+          node --check website/assets/script.js
 
       - name: Validate Wrangler JSONC
         run: node -e "JSON.parse(require('node:fs').readFileSync('website/wrangler.jsonc', 'utf8'))"
@@ -58,6 +61,11 @@ jobs:
               row[1] for row in conn.execute("PRAGMA table_info(users)")
           }
           assert "session_version" in columns, "users.session_version is missing"
+          assert "display_name_key" in columns, "users.display_name_key is missing"
+          consent_columns = {
+              row[1] for row in conn.execute("PRAGMA table_info(account_consents)")
+          }
+          assert {"google_sub", "terms_version", "privacy_version", "accepted_at"} <= consent_columns
           print("D1 schema OK")
 
           # Exercise the same relational cleanup order used by /auth/delete-account.

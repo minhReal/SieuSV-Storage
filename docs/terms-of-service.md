@@ -15,7 +15,7 @@ Use your own Google Account and keep it secure. Do not impersonate another perso
 
 You may request deletion from your Profile. The process asks you to select and verify the same Google account already linked to the website account, then type **DELETE** to confirm. The account is not deleted merely by starting or cancelling verification. Once the final confirmation succeeds, the account and associated account data in the active D1 database are deleted immediately, including any account-owned community records held by the service and account-linked activity records. Existing sessions are invalidated.
 
-Deletion does not delete your Google Account, remove public GitHub commits or files, erase repository forks or third-party copies, or erase data independently held by Google, GitHub or Cloudflare. Certain narrowly scoped records may be retained where a specific legal obligation requires it. Provider-managed database recovery history may persist for a limited period as described in the [Privacy Policy](privacy-policy.md).
+Deletion does not delete your Google Account, remove the separate "Sign in with Google" connection from Google, remove public GitHub commits or files, erase repository forks or third-party copies, or erase data independently held by Google, GitHub or Cloudflare. You can manage or remove the Google sign-in connection separately through your [Google Account linked apps](https://myaccount.google.com/connections). Removing that link alone does not delete website data. Certain narrowly scoped records may be retained where a specific legal obligation requires it. Provider-managed database recovery history may persist for a limited period as described in the [Privacy Policy](privacy-policy.md).
 
 ## 4. Lawful and safe use
 

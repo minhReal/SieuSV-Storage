@@ -5,8 +5,10 @@ const COOKIE="ssv_session";
 const STATE_COOKIE="ssv_oauth_state";
 const CONSENT_COOKIE="ssv_oauth_consent";
 const PENDING_COOKIE="ssv_pending_registration";
-const TERMS_VERSION="2026-11-10";
-const PRIVACY_VERSION="2026-11-10";
+const DELETE_STATE_COOKIE="ssv_delete_state";
+const DELETE_CONFIRM_COOKIE="ssv_delete_confirm";
+const TERMS_VERSION="2026-11-10-v2";
+const PRIVACY_VERSION="2026-11-10-v2";
 const COMMUNITY_FEATURES_ENABLED=false;
 const json=(data,status=200,headers={})=>new Response(JSON.stringify(data),{status,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store",...headers}});
 const b64u=b=>btoa(String.fromCharCode(...new Uint8Array(b))).replace(/=/g,"").replaceAll("+","-").replaceAll("/","_");
@@ -63,6 +65,35 @@ async function readJsonBody(request,maxBytes){
  finally{try{reader.releaseLock()}catch{}}
 }
 async function readSession(req,secret){try{const [p,s]=getCookie(req,COOKIE).split(".");if(!p||!s||!secret)return null;const expected=await sign(p,secret);if(!constantTimeEqual(s,expected))return null;const v=JSON.parse(new TextDecoder().decode(unb64u(p)));if(!v||typeof v.sub!=="string"||v.exp<=Date.now()/1000)return null;const ver=v.ver===undefined?0:v.ver;if(!Number.isSafeInteger(ver)||ver<0)return null;return {...v,ver}}catch{return null}}
+
+async function makeDeleteStateTicket(sub,ver,state,secret){
+ const now=Math.floor(Date.now()/1000),payload=b64u(new TextEncoder().encode(JSON.stringify({purpose:"delete-account",sub,ver,state,iat:now,exp:now+600})));
+ return payload+"."+await sign(payload,secret);
+}
+async function readDeleteStateTicket(req,secret){
+ try{
+  const [p,s]=getCookie(req,DELETE_STATE_COOKIE).split(".");
+  if(!p||!s||!secret)return null;
+  const expected=await sign(p,secret);if(!constantTimeEqual(s,expected))return null;
+  const v=JSON.parse(new TextDecoder().decode(unb64u(p))),now=Math.floor(Date.now()/1000);
+  if(!v||v.purpose!=="delete-account"||typeof v.sub!=="string"||typeof v.state!=="string"||!Number.isSafeInteger(v.ver)||v.ver<0||!Number.isSafeInteger(v.iat)||!Number.isSafeInteger(v.exp)||v.exp<=now||v.iat>now+30||v.exp-v.iat!==600)return null;
+  return v;
+ }catch{return null}
+}
+async function makeDeleteConfirmTicket(sub,ver,secret){
+ const now=Math.floor(Date.now()/1000),payload=b64u(new TextEncoder().encode(JSON.stringify({purpose:"delete-confirm",sub,ver,iat:now,exp:now+300})));
+ return payload+"."+await sign(payload,secret);
+}
+async function readDeleteConfirmTicket(req,secret){
+ try{
+  const [p,s]=getCookie(req,DELETE_CONFIRM_COOKIE).split(".");
+  if(!p||!s||!secret)return null;
+  const expected=await sign(p,secret);if(!constantTimeEqual(s,expected))return null;
+  const v=JSON.parse(new TextDecoder().decode(unb64u(p))),now=Math.floor(Date.now()/1000);
+  if(!v||v.purpose!=="delete-confirm"||typeof v.sub!=="string"||!Number.isSafeInteger(v.ver)||v.ver<0||!Number.isSafeInteger(v.iat)||!Number.isSafeInteger(v.exp)||v.exp<=now||v.iat>now+30||v.exp-v.iat!==300)return null;
+  return v;
+ }catch{return null}
+}
 async function githubFile(path,request){
  if(!safeManifestPath(path)||path.length>500)return {status:400,source:null};
  const cacheKey=new Request(new URL("/__github_cache_v4/"+encodeURIComponent(path),request.url));
@@ -177,7 +208,7 @@ async function handle(request,env){
   if(!asset.ok)return new Response("Website asset not found",{status:502,headers:{"cache-control":"no-store"}});
   return new Response(await asset.text(),{headers:{"content-type":type,"cache-control":"no-store","X-Content-Type-Options":"nosniff"}});
  }
- if((request.method==="POST"||request.method==="PUT")&&(["/auth/logout","/auth/google","/auth/complete-account","/api/me/profile","/api/scripts","/api/reports"].includes(url.pathname)||(request.method==="POST"&&/^\/api\/scripts\/[^/]+\/vote$/.test(url.pathname))||(request.method==="PUT"&&url.pathname.startsWith("/api/scripts/")))){
+ if((request.method==="POST"||request.method==="PUT")&&(["/auth/logout","/auth/google","/auth/complete-account","/auth/delete/start","/auth/delete-account","/auth/delete/cancel","/api/me/profile","/api/scripts","/api/reports"].includes(url.pathname)||(request.method==="POST"&&/^\/api\/scripts\/[^/]+\/vote$/.test(url.pathname))||(request.method==="PUT"&&url.pathname.startsWith("/api/scripts/")))){
   if(request.headers.get("Origin")!==url.origin||request.headers.get("Sec-Fetch-Site")==="cross-site")return json({error:"csrf_rejected"},403);
   if(url.pathname!=="/auth/logout"&&!/^application\/json(?:\s*;|$)/i.test(request.headers.get("content-type")||""))return json({error:"json_required"},415);
  }
@@ -201,8 +232,74 @@ async function handle(request,env){
   headers.append("Set-Cookie",cookie(CONSENT_COOKIE,consentTicket,600));
   return new Response(JSON.stringify({url:google.toString()}),{status:200,headers});
  }
+ if(url.pathname==="/auth/delete/start"&&request.method==="POST"){
+  const session=await readSession(request,env.gg_secret),user=await currentUser(request,env);
+  if(!session||!user||session.sub!==user.google_sub)return json({error:"unauthorized",message:"Sign in before deleting your account."},401);
+  if(!env.GOOGLE_CLIENT_ID||!env.gg_secret||!(env.GOOGLE_CLIENT_SECRET||env.gg_secret))return json({error:"oauth_not_configured",message:"Google sign-in is not configured."},503);
+  const state=b64u(crypto.getRandomValues(new Uint8Array(32))),ticket=await makeDeleteStateTicket(session.sub,session.ver,state,env.gg_secret);
+  const google=new URL("https://accounts.google.com/o/oauth2/v2/auth");
+  google.search=new URLSearchParams({client_id:env.GOOGLE_CLIENT_ID,redirect_uri:origin+"/auth/google/callback",response_type:"code",scope:"openid email profile",state,access_type:"online",prompt:"select_account"}).toString();
+  return json({url:google.toString()},200,{"Set-Cookie":cookie(DELETE_STATE_COOKIE,ticket,600)});
+ }
+ if(url.pathname==="/auth/delete/cancel"&&request.method==="POST"){
+  const headers=new Headers({"content-type":"application/json; charset=utf-8","cache-control":"no-store"});
+  headers.append("Set-Cookie",cookie(DELETE_STATE_COOKIE,"",0));
+  headers.append("Set-Cookie",cookie(DELETE_CONFIRM_COOKIE,"",0));
+  return new Response(JSON.stringify({ok:true}),{status:200,headers});
+ }
+ if(url.pathname==="/auth/delete-account"&&request.method==="POST"){
+  const session=await readSession(request,env.gg_secret),user=await currentUser(request,env),ticket=await readDeleteConfirmTicket(request,env.gg_secret);
+  if(!session||!user||!ticket||ticket.sub!==session.sub||ticket.sub!==user.google_sub||ticket.ver!==session.ver)return json({error:"delete_reauthentication_required",message:"Verify the same Google account again before deleting."},401);
+  const parsed=await readJsonBody(request,1024);if(!parsed.ok)return json({error:parsed.error},parsed.status);
+  if(parsed.body.confirmation!=="DELETE")return json({error:"confirmation_required",message:"Type DELETE exactly to confirm account deletion."},400);
+  const userId=user.id,sub=session.sub;
+  try{
+   await env.DB.batch([
+    env.DB.prepare("DELETE FROM reports WHERE reporter_user_id=? OR script_id IN (SELECT id FROM scripts WHERE user_id=?)").bind(userId,userId),
+    env.DB.prepare("DELETE FROM likes WHERE user_id=? OR script_id IN (SELECT id FROM scripts WHERE user_id=?)").bind(userId,userId),
+    env.DB.prepare("DELETE FROM script_votes WHERE user_id=? OR script_id IN (SELECT id FROM scripts WHERE user_id=?)").bind(userId,userId),
+    env.DB.prepare("DELETE FROM script_versions WHERE script_id IN (SELECT id FROM scripts WHERE user_id=?)").bind(userId),
+    env.DB.prepare("UPDATE script_versions SET editor_user_id=NULL WHERE editor_user_id=?").bind(userId),
+    env.DB.prepare("DELETE FROM scripts WHERE user_id=?").bind(userId),
+    env.DB.prepare("DELETE FROM profile_rate_limits WHERE user_id=?").bind(userId),
+    env.DB.prepare("DELETE FROM report_rate_limits WHERE user_id=?").bind(userId),
+    env.DB.prepare("DELETE FROM upload_rate_limits WHERE user_id=?").bind(userId),
+    env.DB.prepare("DELETE FROM vote_rate_limits WHERE user_id=?").bind(userId),
+    env.DB.prepare("DELETE FROM username_history WHERE user_id=?").bind(userId),
+    env.DB.prepare("DELETE FROM account_consents WHERE google_sub=?").bind(sub),
+    env.DB.prepare("DELETE FROM users WHERE id=? AND google_sub=? AND session_version=?").bind(userId,sub,session.ver)
+   ]);
+   const remaining=await env.DB.prepare("SELECT 1 AS found FROM users WHERE google_sub=? LIMIT 1").bind(sub).first();
+   if(remaining)return json({error:"delete_incomplete",message:"The account could not be fully removed. Please retry or contact the site maintainer."},500);
+  }catch{return json({error:"delete_failed",message:"Account deletion failed before completion. No success was reported; please retry."},500)}
+  const headers=new Headers({"content-type":"application/json; charset=utf-8","cache-control":"no-store"});
+  for(const name of [COOKIE,PENDING_COOKIE,STATE_COOKIE,CONSENT_COOKIE,DELETE_STATE_COOKIE,DELETE_CONFIRM_COOKIE])headers.append("Set-Cookie",cookie(name,"",0));
+  return new Response(JSON.stringify({ok:true}),{status:200,headers});
+ }
  if(url.pathname==="/auth/google/callback"&&request.method==="GET"){
-  const state=url.searchParams.get("state")||"",saved=getCookie(request,STATE_COOKIE),code=url.searchParams.get("code"),consent=await readConsentTicket(request,env.gg_secret,state);
+  const state=url.searchParams.get("state")||"",deleteCookie=getCookie(request,DELETE_STATE_COOKIE),deleteState=await readDeleteStateTicket(request,env.gg_secret);
+  if(deleteCookie){
+   const session=await readSession(request,env.gg_secret),code=url.searchParams.get("code");
+   const fail=reason=>{const headers=new Headers({Location:origin+"/?delete="+reason,"Cache-Control":"no-store"});headers.append("Set-Cookie",cookie(DELETE_STATE_COOKIE,"",0));return new Response(null,{status:302,headers})};
+   if(!deleteState||deleteState.state!==state||!session||session.sub!==deleteState.sub||session.ver!==deleteState.ver)return fail("reauth_failed");
+   if(!code)return fail(url.searchParams.get("error")==="access_denied"?"cancelled":"reauth_failed");
+   let tokenRes,token,userRes,profile;
+   try{
+    tokenRes=await fetch("https://oauth2.googleapis.com/token",{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body:new URLSearchParams({code,client_id:env.GOOGLE_CLIENT_ID,client_secret:env.GOOGLE_CLIENT_SECRET||env.gg_secret,redirect_uri:origin+"/auth/google/callback",grant_type:"authorization_code"})});
+    token=await tokenRes.json();
+    if(!tokenRes.ok||!token.access_token)return fail("reauth_failed");
+    userRes=await fetch("https://www.googleapis.com/oauth2/v3/userinfo",{headers:{authorization:"Bearer "+token.access_token}});
+    profile=await userRes.json();
+   }catch{return fail("reauth_failed")}
+   if(!userRes.ok||!profile.sub||!profile.email_verified)return fail("reauth_failed");
+   if(profile.sub!==session.sub)return fail("account_mismatch");
+   const confirmation=await makeDeleteConfirmTicket(session.sub,session.ver,env.gg_secret);
+   const headers=new Headers({Location:origin+"/?page=profile&delete=confirm","Cache-Control":"no-store"});
+   headers.append("Set-Cookie",cookie(DELETE_CONFIRM_COOKIE,confirmation,300));
+   headers.append("Set-Cookie",cookie(DELETE_STATE_COOKIE,"",0));
+   return new Response(null,{status:302,headers});
+  }
+  const saved=getCookie(request,STATE_COOKIE),code=url.searchParams.get("code"),consent=await readConsentTicket(request,env.gg_secret,state);
   if(!state||!saved||!constantTimeEqual(state,saved)||!code||!consent)return new Response("OAuth state or consent is invalid or expired. Please start sign-in again.",{status:400,headers:{"Cache-Control":"no-store"}});
   const tokenRes=await fetch("https://oauth2.googleapis.com/token",{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body:new URLSearchParams({code,client_id:env.GOOGLE_CLIENT_ID,client_secret:env.GOOGLE_CLIENT_SECRET||env.gg_secret,redirect_uri:origin+"/auth/google/callback",grant_type:"authorization_code"})});
   const token=await tokenRes.json();

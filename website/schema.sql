@@ -18,6 +18,13 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE UNIQUE INDEX IF NOT EXISTS users_public_id_unique ON users(public_id);
 CREATE UNIQUE INDEX IF NOT EXISTS users_display_name_key_unique ON users(display_name_key);
 
+CREATE TABLE IF NOT EXISTS account_consents (
+  google_sub TEXT PRIMARY KEY NOT NULL,
+  terms_version TEXT NOT NULL,
+  privacy_version TEXT NOT NULL,
+  accepted_at INTEGER NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS scripts (
  id TEXT PRIMARY KEY,
  user_id TEXT,

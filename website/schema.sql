@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS users (
  google_sub TEXT UNIQUE,
  username TEXT UNIQUE,
  display_name TEXT,
+ display_name_key TEXT,
  avatar_url TEXT,
  bio TEXT DEFAULT '',
  created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -15,6 +16,7 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS users_public_id_unique ON users(public_id);
+CREATE UNIQUE INDEX IF NOT EXISTS users_display_name_key_unique ON users(display_name_key);
 
 CREATE TABLE IF NOT EXISTS scripts (
  id TEXT PRIMARY KEY,

@@ -4,6 +4,7 @@ const PAGES_ORIGIN="https://minhreal.github.io";
 const COOKIE="ssv_session";
 const STATE_COOKIE="ssv_oauth_state";
 const CONSENT_COOKIE="ssv_oauth_consent";
+const PENDING_COOKIE="ssv_pending_registration";
 const TERMS_VERSION="2026-11-10";
 const PRIVACY_VERSION="2026-11-10";
 const COMMUNITY_FEATURES_ENABLED=false;
@@ -17,6 +18,25 @@ async function makeSession(sub,secret,version=0){const payload=b64u(new TextEnco
 function constantTimeEqual(a,b){if(typeof a!=="string"||typeof b!=="string"||a.length!==b.length)return false;let diff=0;for(let i=0;i<a.length;i++)diff|=a.charCodeAt(i)^b.charCodeAt(i);return diff===0}
 async function makeConsentTicket(state,secret){const now=Math.floor(Date.now()/1000),payload=b64u(new TextEncoder().encode(JSON.stringify({state,terms:TERMS_VERSION,privacy:PRIVACY_VERSION,acceptedAt:now,exp:now+600})));return payload+"."+await sign(payload,secret)}
 async function readConsentTicket(req,secret,state){try{const [p,s]=getCookie(req,CONSENT_COOKIE).split(".");if(!p||!s||!secret)return null;const expected=await sign(p,secret);if(!constantTimeEqual(s,expected))return null;const v=JSON.parse(new TextDecoder().decode(unb64u(p))),now=Math.floor(Date.now()/1000);if(!v||v.state!==state||v.terms!==TERMS_VERSION||v.privacy!==PRIVACY_VERSION||!Number.isSafeInteger(v.acceptedAt)||!Number.isSafeInteger(v.exp)||v.exp<=now||v.acceptedAt>now+30||v.exp-v.acceptedAt!==600)return null;return v}catch{return null}}
+async function makePendingTicket(profile,consent,secret){
+ const now=Math.floor(Date.now()/1000),display=String(profile.name||"").trim().replace(/\s+/g," ").slice(0,40)||"User";
+ const base=display.normalize("NFKD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9_]+/g,"_").replace(/^_+|_+$/g,"").slice(0,32);
+ const username=base.length>=3?base:"user",avatar=typeof profile.picture==="string"&&/^https:\/\//i.test(profile.picture)?profile.picture.slice(0,1000):"";
+ const value={sub:String(profile.sub),display_name:display,username,avatar_url:avatar,terms:consent.terms,privacy:consent.privacy,acceptedAt:consent.acceptedAt,exp:now+600};
+ const payload=b64u(new TextEncoder().encode(JSON.stringify(value)));
+ return payload+"."+await sign(payload,secret);
+}
+async function readPendingTicket(req,secret){
+ try{
+  const [p,s]=getCookie(req,PENDING_COOKIE).split(".");
+  if(!p||!s||!secret)return null;
+  const expected=await sign(p,secret);
+  if(!constantTimeEqual(s,expected))return null;
+  const v=JSON.parse(new TextDecoder().decode(unb64u(p))),now=Math.floor(Date.now()/1000);
+  if(!v||typeof v.sub!=="string"||!v.sub||v.terms!==TERMS_VERSION||v.privacy!==PRIVACY_VERSION||!Number.isSafeInteger(v.acceptedAt)||!Number.isSafeInteger(v.exp)||v.exp<=now||v.exp-now>600||v.acceptedAt>now+30)return null;
+  return v;
+ }catch{return null}
+}
 async function readJsonBody(request,maxBytes){
  const declared=request.headers.get("content-length")||"";
  if(/^\d+$/.test(declared)&&Number(declared)>maxBytes)return {ok:false,error:"payload_too_large",status:413};
@@ -157,7 +177,7 @@ async function handle(request,env){
   if(!asset.ok)return new Response("Website asset not found",{status:502,headers:{"cache-control":"no-store"}});
   return new Response(await asset.text(),{headers:{"content-type":type,"cache-control":"no-store","X-Content-Type-Options":"nosniff"}});
  }
- if((request.method==="POST"||request.method==="PUT")&&(["/auth/logout","/auth/google","/api/me/profile","/api/scripts","/api/reports"].includes(url.pathname)||(request.method==="POST"&&/^\/api\/scripts\/[^/]+\/vote$/.test(url.pathname))||(request.method==="PUT"&&url.pathname.startsWith("/api/scripts/")))){
+ if((request.method==="POST"||request.method==="PUT")&&(["/auth/logout","/auth/google","/auth/complete-account","/api/me/profile","/api/scripts","/api/reports"].includes(url.pathname)||(request.method==="POST"&&/^\/api\/scripts\/[^/]+\/vote$/.test(url.pathname))||(request.method==="PUT"&&url.pathname.startsWith("/api/scripts/")))){
   if(request.headers.get("Origin")!==url.origin||request.headers.get("Sec-Fetch-Site")==="cross-site")return json({error:"csrf_rejected"},403);
   if(url.pathname!=="/auth/logout"&&!/^application\/json(?:\s*;|$)/i.test(request.headers.get("content-type")||""))return json({error:"json_required"},415);
  }
@@ -186,18 +206,81 @@ async function handle(request,env){
   if(!state||!saved||!constantTimeEqual(state,saved)||!code||!consent)return new Response("OAuth state or consent is invalid or expired. Please start sign-in again.",{status:400,headers:{"Cache-Control":"no-store"}});
   const tokenRes=await fetch("https://oauth2.googleapis.com/token",{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body:new URLSearchParams({code,client_id:env.GOOGLE_CLIENT_ID,client_secret:env.GOOGLE_CLIENT_SECRET||env.gg_secret,redirect_uri:origin+"/auth/google/callback",grant_type:"authorization_code"})});
   const token=await tokenRes.json();
-  if(!tokenRes.ok||!token.access_token)return new Response("Google token exchange failed. Check OAuth Client ID, gg_secret and redirect URI.",{status:502});
+  if(!tokenRes.ok||!token.access_token)return new Response("Google token exchange failed. Check OAuth Client ID, Client Secret and redirect URI.",{status:502});
   const userRes=await fetch("https://www.googleapis.com/oauth2/v3/userinfo",{headers:{authorization:"Bearer "+token.access_token}});
   const profile=await userRes.json();
   if(!userRes.ok||!profile.sub||!profile.email_verified)return new Response("Google account could not be verified.",{status:401});
   const old=await env.DB.prepare("SELECT id,public_id,username,session_version FROM users WHERE google_sub=? LIMIT 1").bind(profile.sub).first();
-  let username=old?.username;
-  if(!username){const base=(profile.email.split("@")[0]||"user").toLowerCase().replace(/[^a-z0-9_]/g,"").slice(0,20)||"user";username=base+"_"+crypto.randomUUID().slice(0,6)}
-  const id=old?.id||profile.sub;
-  await env.DB.prepare("INSERT INTO users (id,google_sub,username,display_name,avatar_url,public_id) VALUES (?,?,?,?,?,?) ON CONFLICT(google_sub) DO NOTHING").bind(id,profile.sub,username,profile.name||username,profile.picture||"",old?.public_id||crypto.randomUUID().replaceAll("-","").slice(0,16)).run();
-  await env.DB.prepare("INSERT INTO account_consents (google_sub,terms_version,privacy_version,accepted_at) VALUES (?,?,?,?) ON CONFLICT(google_sub) DO UPDATE SET terms_version=excluded.terms_version,privacy_version=excluded.privacy_version,accepted_at=excluded.accepted_at").bind(profile.sub,TERMS_VERSION,PRIVACY_VERSION,consent.acceptedAt).run();
-  const session=await makeSession(profile.sub,env.gg_secret,Number(old?.session_version||0));
-  const headers=new Headers({Location:origin+"/?login=success","Cache-Control":"no-store"});headers.append("Set-Cookie",cookie(COOKIE,session,604800));headers.append("Set-Cookie",cookie(STATE_COOKIE,"",0));headers.append("Set-Cookie",cookie(CONSENT_COOKIE,"",0));return new Response(null,{status:302,headers});
+  if(old){
+   await env.DB.prepare("INSERT INTO account_consents (google_sub,terms_version,privacy_version,accepted_at) VALUES (?,?,?,?) ON CONFLICT(google_sub) DO UPDATE SET terms_version=excluded.terms_version,privacy_version=excluded.privacy_version,accepted_at=excluded.accepted_at").bind(profile.sub,consent.terms,consent.privacy,consent.acceptedAt).run();
+   const session=await makeSession(profile.sub,env.gg_secret,Number(old.session_version||0));
+   const headers=new Headers({Location:origin+"/?login=success","Cache-Control":"no-store"});
+   headers.append("Set-Cookie",cookie(COOKIE,session,604800));headers.append("Set-Cookie",cookie(PENDING_COOKIE,"",0));headers.append("Set-Cookie",cookie(STATE_COOKIE,"",0));headers.append("Set-Cookie",cookie(CONSENT_COOKIE,"",0));
+   return new Response(null,{status:302,headers});
+  }
+  const pending=await makePendingTicket(profile,consent,env.gg_secret);
+  const headers=new Headers({Location:origin+"/?setup=1","Cache-Control":"no-store"});
+  headers.append("Set-Cookie",cookie(COOKIE,"",0));headers.append("Set-Cookie",cookie(PENDING_COOKIE,pending,600));headers.append("Set-Cookie",cookie(STATE_COOKIE,"",0));headers.append("Set-Cookie",cookie(CONSENT_COOKIE,"",0));
+  return new Response(null,{status:302,headers});
+ }
+ if(url.pathname==="/auth/pending"&&request.method==="GET"){
+  const pending=await readPendingTicket(request,env.gg_secret);
+  if(!pending)return json({registration:null},401);
+  return json({registration:{display_name:pending.display_name,username:pending.username,avatar_url:pending.avatar_url}});
+ }
+ if(url.pathname==="/auth/complete-account"&&request.method==="POST"){
+  const pending=await readPendingTicket(request,env.gg_secret);
+  if(!pending)return json({error:"registration_expired",message:"Your registration session expired. Start Google sign-in again."},401);
+  const parsed=await readJsonBody(request,370000);
+  if(!parsed.ok)return json({error:parsed.error},parsed.status);
+  const body=parsed.body,requestedUsername=String(body.username??"").trim().toLowerCase(),requestedDisplay=String(body.display_name??"").trim().replace(/\s+/g," ");
+  const avatar=String(body.avatar_url??pending.avatar_url??"").trim();
+  if(!/^[a-z0-9_]{3,32}$/.test(requestedUsername))return json({error:"invalid_username",message:"Username must be 3-32 characters and use only lowercase letters, numbers or underscores."},400);
+  if(requestedDisplay.length<1||requestedDisplay.length>40)return json({error:"invalid_display_name",message:"Display name must be 1-40 characters."},400);
+  if(avatar.length>330000)return json({error:"invalid_avatar",message:"Avatar image is too large."},400);
+  if(avatar&&!(/^https:\/\//i.test(avatar)&&avatar.length<=1000)&&!/^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/.test(avatar))return json({error:"invalid_avatar",message:"Avatar must be an HTTPS URL or a supported image uploaded from your device."},400);
+  const existing=await env.DB.prepare("SELECT id,session_version FROM users WHERE google_sub=? LIMIT 1").bind(pending.sub).first();
+  if(existing){
+   const session=await makeSession(pending.sub,env.gg_secret,Number(existing.session_version||0));
+   const headers=new Headers({"content-type":"application/json; charset=utf-8","cache-control":"no-store"});
+   headers.append("Set-Cookie",cookie(COOKIE,session,604800));headers.append("Set-Cookie",cookie(PENDING_COOKIE,"",0));
+   return new Response(JSON.stringify({ok:true,existing:true}),{status:200,headers});
+  }
+  const displayKey=value=>String(value).normalize("NFKC").trim().replace(/\s+/g," ").toLowerCase();
+  let finalUsername="",finalDisplay="";
+  for(let attempt=0;attempt<12;attempt++){
+   finalUsername=requestedUsername;
+   for(let n=2;n<10000;n++){
+    const used=await env.DB.prepare("SELECT 1 AS found FROM users WHERE username=? LIMIT 1").bind(finalUsername).first();
+    if(!used)break;
+    const suffix=String(n);finalUsername=requestedUsername.slice(0,32-suffix.length)+suffix;
+   }
+   if(await env.DB.prepare("SELECT 1 AS found FROM users WHERE username=? LIMIT 1").bind(finalUsername).first())continue;
+   finalDisplay=requestedDisplay;
+   for(let n=2;n<10000;n++){
+    const key=displayKey(finalDisplay),used=await env.DB.prepare("SELECT 1 AS found FROM users WHERE display_name_key=? OR lower(trim(display_name))=? LIMIT 1").bind(key,key).first();
+    if(!used)break;
+    const suffix=" "+n;finalDisplay=requestedDisplay.slice(0,40-suffix.length).trimEnd()+suffix;
+   }
+   const key=displayKey(finalDisplay);
+   try{
+    await env.DB.batch([
+     env.DB.prepare("INSERT INTO users (id,google_sub,username,display_name,display_name_key,avatar_url,public_id) VALUES (?,?,?,?,?,?,?)").bind(pending.sub,pending.sub,finalUsername,finalDisplay,key,avatar,crypto.randomUUID().replaceAll("-","").slice(0,16)),
+     env.DB.prepare("INSERT INTO account_consents (google_sub,terms_version,privacy_version,accepted_at) VALUES (?,?,?,?) ON CONFLICT(google_sub) DO UPDATE SET terms_version=excluded.terms_version,privacy_version=excluded.privacy_version,accepted_at=excluded.accepted_at").bind(pending.sub,pending.terms,pending.privacy,pending.acceptedAt)
+    ]);
+    break;
+   }catch(error){
+    const raced=await env.DB.prepare("SELECT id FROM users WHERE google_sub=? LIMIT 1").bind(pending.sub).first();
+    if(raced)break;
+    if(attempt===11)return json({error:"account_create_failed",message:"Could not reserve a unique name. Please try again."},409);
+   }
+  }
+  const user=await env.DB.prepare("SELECT id,session_version FROM users WHERE google_sub=? LIMIT 1").bind(pending.sub).first();
+  if(!user)return json({error:"account_create_failed",message:"Could not create your account. Please try again."},409);
+  const session=await makeSession(pending.sub,env.gg_secret,Number(user.session_version||0));
+  const headers=new Headers({"content-type":"application/json; charset=utf-8","cache-control":"no-store"});
+  headers.append("Set-Cookie",cookie(COOKIE,session,604800));headers.append("Set-Cookie",cookie(PENDING_COOKIE,"",0));
+  return new Response(JSON.stringify({ok:true,username:finalUsername,display_name:finalDisplay}),{status:201,headers});
  }
  if(url.pathname==="/auth/logout"&&request.method==="POST"){const session=await readSession(request,env.gg_secret);if(session)await env.DB.prepare("UPDATE users SET session_version=COALESCE(session_version,0)+1 WHERE google_sub=?").bind(session.sub).run();return json({ok:true},200,{"Set-Cookie":cookie(COOKIE,"",0)})}
  if(url.pathname==="/api/me"&&request.method==="GET"){const user=await currentUser(request,env);if(user){delete user.id;delete user.session_version}return json({user})}

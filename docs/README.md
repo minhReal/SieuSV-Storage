@@ -5,7 +5,9 @@ This directory contains implementation and contribution references for SieuSV-St
 ## Guides
 
 - [Manifest format](manifest.md) explains how GitHub-hosted scripts are discovered and described.
-- [Website API](api.md) documents the public library endpoints, community version history and report submission.
+- [Website API](api.md) documents the public read-only library endpoints.
+- [Privacy Policy](privacy-policy.md) describes account data, Google sign-in, account deletion and D1 recovery history.
+- [Terms and Conditions](terms-of-service.md) describes the read-only service and account-deletion process.
 
 For contribution workflow and review expectations, see [CONTRIBUTING.md](../CONTRIBUTING.md). The repository overview and plugin catalogue are in the [root README](../README.md).
 
@@ -14,9 +16,9 @@ For contribution workflow and review expectations, see [CONTRIBUTING.md](../CONT
 SieuSV-Storage has two content sources:
 
 1. **GitHub scripts** live in this repository. Each script folder contains an `SVS.json` or `svs.json` manifest and the files listed by that manifest.
-2. **Community scripts** are submitted through the website. Their metadata and source are stored in the existing Cloudflare D1 database.
+2. **Legacy community records** may remain in Cloudflare D1 from earlier website features. Uploads, profile edits, votes and reports are currently disabled and the read-only website does not expose those records.
 
-The existing Cloudflare Worker serves the website, handles authentication and API requests, reads the GitHub manifest tree, and connects to D1. The website does not create a second backend.
+The existing Cloudflare Worker serves the website, handles Google OAuth and account requests, reads the GitHub manifest tree, and connects to D1. The website does not create a second backend.
 
 ### GitHub content flow
 

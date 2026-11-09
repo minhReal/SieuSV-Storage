@@ -186,7 +186,7 @@ async function githubIndex(request){
  return result;
 }
 
-async function currentUser(req,env){const session=await readSession(req,env.gg_secret);if(!session)return null;const user=await env.DB.prepare("SELECT id,public_id,username,display_name,avatar_url,bio,created_at,username_updated_at,session_version FROM users WHERE google_sub=? LIMIT 1").bind(session.sub).first();if(!user||Number(user.session_version||0)!==session.ver)return null;return user}
+async function currentUser(req,env){const session=await readSession(req,env.gg_secret);if(!session)return null;const user=await env.DB.prepare("SELECT id,google_sub,public_id,username,display_name,avatar_url,bio,created_at,username_updated_at,session_version FROM users WHERE google_sub=? LIMIT 1").bind(session.sub).first();if(!user||Number(user.session_version||0)!==session.ver)return null;return user}
 async function handle(request,env){
  const url=new URL(request.url),origin=SITE;
  if(!COMMUNITY_FEATURES_ENABLED){
@@ -380,7 +380,7 @@ async function handle(request,env){
   return new Response(JSON.stringify({ok:true,username:finalUsername,display_name:finalDisplay}),{status:201,headers});
  }
  if(url.pathname==="/auth/logout"&&request.method==="POST"){const session=await readSession(request,env.gg_secret);if(session)await env.DB.prepare("UPDATE users SET session_version=COALESCE(session_version,0)+1 WHERE google_sub=?").bind(session.sub).run();return json({ok:true},200,{"Set-Cookie":cookie(COOKIE,"",0)})}
- if(url.pathname==="/api/me"&&request.method==="GET"){const user=await currentUser(request,env);if(user){delete user.id;delete user.session_version}return json({user})}
+ if(url.pathname==="/api/me"&&request.method==="GET"){const user=await currentUser(request,env);if(user){delete user.id;delete user.google_sub;delete user.session_version}return json({user})}
  if(url.pathname==="/api/me/profile"&&request.method==="POST"){
   const user=await currentUser(request,env);if(!user)return json({error:"unauthorized"},401);
   const parsedBody=await readJsonBody(request,370000);if(!parsedBody.ok)return json({error:parsedBody.error,message:parsedBody.error==="payload_too_large"?"Profile image is too large.":undefined},parsedBody.status);const body=parsedBody.body;

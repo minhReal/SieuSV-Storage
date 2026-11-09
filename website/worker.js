@@ -3,6 +3,9 @@ const SITE="https://sieu-sv-library-api.sieusv-storage-minhreal.workers.dev";
 const PAGES_ORIGIN="https://minhreal.github.io";
 const COOKIE="ssv_session";
 const STATE_COOKIE="ssv_oauth_state";
+const CONSENT_COOKIE="ssv_oauth_consent";
+const TERMS_VERSION="2026-11-10";
+const PRIVACY_VERSION="2026-11-10";
 const COMMUNITY_FEATURES_ENABLED=false;
 const json=(data,status=200,headers={})=>new Response(JSON.stringify(data),{status,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store",...headers}});
 const b64u=b=>btoa(String.fromCharCode(...new Uint8Array(b))).replace(/=/g,"").replaceAll("+","-").replaceAll("/","_");
@@ -12,6 +15,8 @@ function getCookie(req,name){return (req.headers.get("Cookie")||"").split(";").m
 async function sign(value,secret){const key=await crypto.subtle.importKey("raw",new TextEncoder().encode(secret),{name:"HMAC",hash:"SHA-256"},false,["sign"]);return b64u(await crypto.subtle.sign("HMAC",key,new TextEncoder().encode(value)))}
 async function makeSession(sub,secret,version=0){const payload=b64u(new TextEncoder().encode(JSON.stringify({sub,exp:Math.floor(Date.now()/1000)+604800,ver:Number.isSafeInteger(Number(version))&&Number(version)>=0?Number(version):0})));return payload+"."+await sign(payload,secret)}
 function constantTimeEqual(a,b){if(typeof a!=="string"||typeof b!=="string"||a.length!==b.length)return false;let diff=0;for(let i=0;i<a.length;i++)diff|=a.charCodeAt(i)^b.charCodeAt(i);return diff===0}
+async function makeConsentTicket(state,secret){const now=Math.floor(Date.now()/1000),payload=b64u(new TextEncoder().encode(JSON.stringify({state,terms:TERMS_VERSION,privacy:PRIVACY_VERSION,acceptedAt:now,exp:now+600})));return payload+"."+await sign(payload,secret)}
+async function readConsentTicket(req,secret,state){try{const [p,s]=getCookie(req,CONSENT_COOKIE).split(".");if(!p||!s||!secret)return null;const expected=await sign(p,secret);if(!constantTimeEqual(s,expected))return null;const v=JSON.parse(new TextDecoder().decode(unb64u(p))),now=Math.floor(Date.now()/1000);if(!v||v.state!==state||v.terms!==TERMS_VERSION||v.privacy!==PRIVACY_VERSION||!Number.isSafeInteger(v.acceptedAt)||!Number.isSafeInteger(v.exp)||v.exp<=now||v.acceptedAt>now+30||v.exp-v.acceptedAt!==600)return null;return v}catch{return null}}
 async function readJsonBody(request,maxBytes){
  const declared=request.headers.get("content-length")||"";
  if(/^\d+$/.test(declared)&&Number(declared)>maxBytes)return {ok:false,error:"payload_too_large",status:413};
@@ -135,10 +140,10 @@ async function handle(request,env){
  const url=new URL(request.url),origin=SITE;
  if(!COMMUNITY_FEATURES_ENABLED){
   const path=url.pathname;
-  if(path==="/api/me"&&request.method==="GET")return json({user:null});
   if(path==="/api/scripts"&&request.method==="GET")return json({scripts:[]});
+  if(path==="/api/me"&&request.method!=="GET")return json({error:"read_only",message:"Account data can only be viewed in read-only mode."},405);
   if(path==="/profile"||path.startsWith("/profile/")||path==="/upload"||path==="/settings")return new Response(null,{status:302,headers:{Location:origin+"/","Cache-Control":"no-store"}});
-  if(path==="/auth/google"||path==="/auth/google/callback"||path==="/api/me/profile"||path==="/api/reports"||path==="/api/scripts"||path.startsWith("/api/scripts/")||path.startsWith("/api/profile/"))return json({error:"community_paused",message:"Community accounts, uploads, profiles, votes and reports are temporarily paused. GitHub-hosted scripts remain available."},503,{"Retry-After":"86400"});
+  if(path==="/api/me/profile"||path==="/api/reports"||path==="/api/scripts"||path.startsWith("/api/scripts/")||path.startsWith("/api/profile/"))return json({error:"community_paused",message:"The library is read-only. Uploads, profile edits, votes and reports are disabled."},503,{"Retry-After":"86400"});
  }
  const assetFiles={
   "/assets/index.css":["index.css","text/css; charset=utf-8"],
@@ -152,23 +157,34 @@ async function handle(request,env){
   if(!asset.ok)return new Response("Website asset not found",{status:502,headers:{"cache-control":"no-store"}});
   return new Response(await asset.text(),{headers:{"content-type":type,"cache-control":"no-store","X-Content-Type-Options":"nosniff"}});
  }
- if((request.method==="POST"||request.method==="PUT")&&(["/auth/logout","/api/me/profile","/api/scripts","/api/reports"].includes(url.pathname)||(request.method==="POST"&&/^\/api\/scripts\/[^/]+\/vote$/.test(url.pathname))||(request.method==="PUT"&&url.pathname.startsWith("/api/scripts/")))){
+ if((request.method==="POST"||request.method==="PUT")&&(["/auth/logout","/auth/google","/api/me/profile","/api/scripts","/api/reports"].includes(url.pathname)||(request.method==="POST"&&/^\/api\/scripts\/[^/]+\/vote$/.test(url.pathname))||(request.method==="PUT"&&url.pathname.startsWith("/api/scripts/")))){
   if(request.headers.get("Origin")!==url.origin||request.headers.get("Sec-Fetch-Site")==="cross-site")return json({error:"csrf_rejected"},403);
   if(url.pathname!=="/auth/logout"&&!/^application\/json(?:\s*;|$)/i.test(request.headers.get("content-type")||""))return json({error:"json_required"},415);
  }
  if(request.method==="OPTIONS")return new Response(null,{status:204,headers:{"Allow":"GET, POST, OPTIONS"}});
  if(url.pathname==="/auth/google"&&request.method==="GET"){
-  if(!env.GOOGLE_CLIENT_ID||!env.gg_secret)return json({error:"oauth_not_configured",message:"Missing GOOGLE_CLIENT_ID or gg_secret."},503);
+  return new Response(null,{status:302,headers:{Location:origin+"/?login=consent_required","Cache-Control":"no-store"}});
+ }
+ if(url.pathname==="/auth/google"&&request.method==="POST"){
+  if(!env.GOOGLE_CLIENT_ID||!env.gg_secret||!(env.GOOGLE_CLIENT_SECRET||env.gg_secret))return json({error:"oauth_not_configured",message:"Google sign-in is not configured."},503);
+  const parsed=await readJsonBody(request,2048);
+  if(!parsed.ok)return json({error:parsed.error},parsed.status);
+  const body=parsed.body;
+  if(body.termsAccepted!==true||body.privacyAcknowledged!==true||body.guardianPermission!==true)return json({error:"consent_required",message:"Accept the Terms, acknowledge the Privacy Policy and confirm any required parent or guardian permission before continuing."},400);
   const state=b64u(crypto.getRandomValues(new Uint8Array(32)));
+  const consentTicket=await makeConsentTicket(state,env.gg_secret);
   const redirect=origin+"/auth/google/callback";
   const google=new URL("https://accounts.google.com/o/oauth2/v2/auth");
   google.search=new URLSearchParams({client_id:env.GOOGLE_CLIENT_ID,redirect_uri:redirect,response_type:"code",scope:"openid email profile",state,access_type:"online",prompt:"select_account"}).toString();
-  return new Response(null,{status:302,headers:{Location:google.toString(),"Set-Cookie":cookie(STATE_COOKIE,state,600),"Cache-Control":"no-store"}});
+  const headers=new Headers({"content-type":"application/json; charset=utf-8","cache-control":"no-store"});
+  headers.append("Set-Cookie",cookie(STATE_COOKIE,state,600));
+  headers.append("Set-Cookie",cookie(CONSENT_COOKIE,consentTicket,600));
+  return new Response(JSON.stringify({url:google.toString()}),{status:200,headers});
  }
  if(url.pathname==="/auth/google/callback"&&request.method==="GET"){
-  const state=url.searchParams.get("state")||"",saved=getCookie(request,STATE_COOKIE),code=url.searchParams.get("code");
-  if(!state||!saved||!constantTimeEqual(state,saved)||!code)return new Response("OAuth state invalid or login cancelled.",{status:400});
-  const tokenRes=await fetch("https://oauth2.googleapis.com/token",{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body:new URLSearchParams({code,client_id:env.GOOGLE_CLIENT_ID,client_secret:env.gg_secret,redirect_uri:origin+"/auth/google/callback",grant_type:"authorization_code"})});
+  const state=url.searchParams.get("state")||"",saved=getCookie(request,STATE_COOKIE),code=url.searchParams.get("code"),consent=await readConsentTicket(request,env.gg_secret,state);
+  if(!state||!saved||!constantTimeEqual(state,saved)||!code||!consent)return new Response("OAuth state or consent is invalid or expired. Please start sign-in again.",{status:400,headers:{"Cache-Control":"no-store"}});
+  const tokenRes=await fetch("https://oauth2.googleapis.com/token",{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body:new URLSearchParams({code,client_id:env.GOOGLE_CLIENT_ID,client_secret:env.GOOGLE_CLIENT_SECRET||env.gg_secret,redirect_uri:origin+"/auth/google/callback",grant_type:"authorization_code"})});
   const token=await tokenRes.json();
   if(!tokenRes.ok||!token.access_token)return new Response("Google token exchange failed. Check OAuth Client ID, gg_secret and redirect URI.",{status:502});
   const userRes=await fetch("https://www.googleapis.com/oauth2/v3/userinfo",{headers:{authorization:"Bearer "+token.access_token}});
@@ -179,8 +195,9 @@ async function handle(request,env){
   if(!username){const base=(profile.email.split("@")[0]||"user").toLowerCase().replace(/[^a-z0-9_]/g,"").slice(0,20)||"user";username=base+"_"+crypto.randomUUID().slice(0,6)}
   const id=old?.id||profile.sub;
   await env.DB.prepare("INSERT INTO users (id,google_sub,username,display_name,avatar_url,public_id) VALUES (?,?,?,?,?,?) ON CONFLICT(google_sub) DO NOTHING").bind(id,profile.sub,username,profile.name||username,profile.picture||"",old?.public_id||crypto.randomUUID().replaceAll("-","").slice(0,16)).run();
+  await env.DB.prepare("INSERT INTO account_consents (google_sub,terms_version,privacy_version,accepted_at) VALUES (?,?,?,?) ON CONFLICT(google_sub) DO UPDATE SET terms_version=excluded.terms_version,privacy_version=excluded.privacy_version,accepted_at=excluded.accepted_at").bind(profile.sub,TERMS_VERSION,PRIVACY_VERSION,consent.acceptedAt).run();
   const session=await makeSession(profile.sub,env.gg_secret,Number(old?.session_version||0));
-  const headers=new Headers({Location:origin+"/?login=success","Cache-Control":"no-store"});headers.append("Set-Cookie",cookie(COOKIE,session,604800));headers.append("Set-Cookie",cookie(STATE_COOKIE,"",0));return new Response(null,{status:302,headers});
+  const headers=new Headers({Location:origin+"/?login=success","Cache-Control":"no-store"});headers.append("Set-Cookie",cookie(COOKIE,session,604800));headers.append("Set-Cookie",cookie(STATE_COOKIE,"",0));headers.append("Set-Cookie",cookie(CONSENT_COOKIE,"",0));return new Response(null,{status:302,headers});
  }
  if(url.pathname==="/auth/logout"&&request.method==="POST"){const session=await readSession(request,env.gg_secret);if(session)await env.DB.prepare("UPDATE users SET session_version=COALESCE(session_version,0)+1 WHERE google_sub=?").bind(session.sub).run();return json({ok:true},200,{"Set-Cookie":cookie(COOKIE,"",0)})}
  if(url.pathname==="/api/me"&&request.method==="GET"){const user=await currentUser(request,env);if(user){delete user.id;delete user.session_version}return json({user})}

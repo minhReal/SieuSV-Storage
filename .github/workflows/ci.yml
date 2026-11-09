@@ -28,6 +28,10 @@ jobs:
 
       - name: Validate Wrangler JSONC
         run: node -e "JSON.parse(require('node:fs').readFileSync('website/wrangler.jsonc', 'utf8'))"
+      - name: Check browser JavaScript syntax
+        run: |
+          node --check < website/assets/index.js
+          node --check < website/assets/script.js
 
       - name: Validate D1 schema
         run: |
@@ -46,7 +50,7 @@ jobs:
           required = {
               "users", "scripts", "likes", "reports", "script_versions",
               "script_votes", "profile_rate_limits", "report_rate_limits",
-              "upload_rate_limits", "vote_rate_limits", "username_history"
+              "upload_rate_limits", "vote_rate_limits", "username_history", "account_consents"
           }
           missing = required - tables
           assert not missing, f"Missing tables: {sorted(missing)}"
@@ -55,6 +59,53 @@ jobs:
           }
           assert "session_version" in columns, "users.session_version is missing"
           print("D1 schema OK")
+
+          # Exercise the same relational cleanup order used by /auth/delete-account.
+          conn.execute("INSERT INTO users (id, google_sub, username) VALUES ('u1', 'g1', 'one')")
+          conn.execute("INSERT INTO users (id, google_sub, username) VALUES ('u2', 'g2', 'two')")
+          conn.execute("INSERT INTO scripts (id, user_id, title, source) VALUES ('s1', 'u1', 'Owned', 'print(1)')")
+          conn.execute("INSERT INTO scripts (id, user_id, title, source) VALUES ('s2', 'u2', 'Other', 'print(2)')")
+          conn.execute("INSERT INTO likes (user_id, script_id) VALUES ('u1', 's2')")
+          conn.execute("INSERT INTO likes (user_id, script_id) VALUES ('u2', 's1')")
+          conn.execute("INSERT INTO reports (id, reporter_user_id, script_id, script_title, reason) VALUES ('r1', 'u1', 's2', 'Other', 'other')")
+          conn.execute("INSERT INTO reports (id, reporter_user_id, script_id, script_title, reason) VALUES ('r2', 'u2', 's1', 'Owned', 'other')")
+          conn.execute("INSERT INTO script_votes (script_id, user_id, vote) VALUES ('s2', 'u1', 'like')")
+          conn.execute("INSERT INTO script_votes (script_id, user_id, vote) VALUES ('s1', 'u2', 'like')")
+          conn.execute("INSERT INTO script_versions (id, script_id, version_number, title, editor_user_id) VALUES ('v1', 's1', 1, 'Owned v1', 'u1')")
+          conn.execute("INSERT INTO script_versions (id, script_id, version_number, title, editor_user_id) VALUES ('v2', 's2', 1, 'Other v1', 'u1')")
+          conn.execute("INSERT INTO profile_rate_limits VALUES ('u1', 1, 1)")
+          conn.execute("INSERT INTO report_rate_limits VALUES ('u1', 1, 1)")
+          conn.execute("INSERT INTO upload_rate_limits VALUES ('u1', 1, 1)")
+          conn.execute("INSERT INTO vote_rate_limits VALUES ('u1', 1, 1)")
+          conn.execute("INSERT INTO username_history (user_id, username, changed_at) VALUES ('u1', 'one_old', 1)")
+          conn.execute("INSERT INTO account_consents VALUES ('g1', 't1', 'p1', 1)")
+
+          cleanup = [
+              ("DELETE FROM reports WHERE reporter_user_id=? OR script_id IN (SELECT id FROM scripts WHERE user_id=?)", ("u1", "u1")),
+              ("DELETE FROM likes WHERE user_id=? OR script_id IN (SELECT id FROM scripts WHERE user_id=?)", ("u1", "u1")),
+              ("DELETE FROM script_votes WHERE user_id=? OR script_id IN (SELECT id FROM scripts WHERE user_id=?)", ("u1", "u1")),
+              ("DELETE FROM script_versions WHERE script_id IN (SELECT id FROM scripts WHERE user_id=?)", ("u1",)),
+              ("UPDATE script_versions SET editor_user_id=NULL WHERE editor_user_id=?", ("u1",)),
+              ("DELETE FROM scripts WHERE user_id=?", ("u1",)),
+              ("DELETE FROM profile_rate_limits WHERE user_id=?", ("u1",)),
+              ("DELETE FROM report_rate_limits WHERE user_id=?", ("u1",)),
+              ("DELETE FROM upload_rate_limits WHERE user_id=?", ("u1",)),
+              ("DELETE FROM vote_rate_limits WHERE user_id=?", ("u1",)),
+              ("DELETE FROM username_history WHERE user_id=?", ("u1",)),
+              ("DELETE FROM account_consents WHERE google_sub=?", ("g1",)),
+              ("DELETE FROM users WHERE id=? AND google_sub=? AND session_version=?", ("u1", "g1", 0)),
+          ]
+          for sql, params in cleanup:
+              conn.execute(sql, params)
+          assert conn.execute("SELECT 1 FROM users WHERE id='u1'").fetchone() is None
+          assert conn.execute("SELECT 1 FROM users WHERE id='u2'").fetchone() is not None
+          assert conn.execute("SELECT 1 FROM scripts WHERE id='s1'").fetchone() is None
+          assert conn.execute("SELECT 1 FROM reports").fetchone() is None
+          assert conn.execute("SELECT 1 FROM likes").fetchone() is None
+          assert conn.execute("SELECT 1 FROM script_votes WHERE user_id='u1' OR script_id='s1'").fetchone() is None
+          assert conn.execute("SELECT editor_user_id FROM script_versions WHERE id='v2'").fetchone()[0] is None
+          assert conn.execute("SELECT 1 FROM account_consents WHERE google_sub='g1'").fetchone() is None
+          print("Account deletion cleanup OK")
           PY
 
       - name: Check committed whitespace errors

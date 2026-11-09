@@ -20,3 +20,20 @@ body{position:relative;isolation:isolate;background:var(--bg)}body::after{conten
 #accountForm input:disabled,#accountForm textarea:disabled{opacity:.72;cursor:not-allowed}
 #accountForm button:disabled{opacity:.5;cursor:not-allowed}
 @media(max-width:520px){.consentDialog{padding:16px}.consentDialog #consentContinue{width:100%;min-width:0;justify-content:flex-start}}
+
+.consentDialog #consentContinue{position:relative;justify-content:center;text-align:center}
+.consentDialog #consentContinue .googleIcon{position:absolute;left:16px}
+.consentDialog #consentContinue span{display:block;width:100%;text-align:center}
+.registrationForm{display:grid;gap:14px;max-width:680px}
+.registrationForm .uploadSection{display:grid;gap:8px}
+.registrationForm .uploadSection h2{margin-bottom:4px}
+.registrationForm label{display:block;margin:7px 0 3px;font-weight:650}
+.registrationForm input:not([type=file]){width:100%;background:#030303;border:1px solid #373737;border-radius:7px;padding:12px;color:#fff}
+.registrationForm input:focus{outline:none;border-color:#aaa}
+.registrationAvatarStage{max-width:320px;aspect-ratio:1}
+.usernameField{display:flex;align-items:center;gap:8px}
+.usernameField>span{color:#aaa;font-weight:700}
+.usernameField input{flex:1;min-width:0}
+.registrationActions{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:#080808;border:1px solid #303030;padding:14px 18px}
+.registrationActions p{font-size:12px;max-width:360px}
+@media(max-width:520px){.registrationActions{align-items:stretch;flex-direction:column}.registrationActions>div{display:flex;gap:8px}.registrationActions button{flex:1}}

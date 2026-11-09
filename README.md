@@ -57,7 +57,7 @@ Some tools are designed for playtesting only. Check each plugin's folder and REA
 - **Google sign-in:** users can create or access a website account through Google OAuth.
 - **Account deletion:** signed-in users can select the same Google account again, verify the linked identity and type `DELETE` to remove the website account and its associated active database records.
 
-Community uploads, profile edits, votes and report submissions remain disabled. Existing legacy community records are not served while the read-only pause is active. The site does not delete a user's Google Account or public GitHub history. Read the [Privacy Policy](website/index.html#privacy) and [Terms](website/index.html#terms) before using account features. Review source code and applicable licenses before using or redistributing repository content.
+Community uploads, profile edits, votes and report submissions remain disabled. Existing legacy community records are not served while the read-only pause is active. The site does not delete a user's Google Account or public GitHub history. Read the [Privacy Policy](docs/privacy-policy.md) and [Terms](docs/terms-of-service.md) before using account features. Review source code and applicable licenses before using or redistributing repository content.
 
 ## Pull Request or Website
 
@@ -207,7 +207,7 @@ Một số plugin phụ thuộc vào cấu trúc GUI, quyền truy cập hoặc 
 - **Google sign-in:** tạo hoặc truy cập tài khoản website qua Google OAuth.
 - **Delete Account:** người dùng đã đăng nhập chọn lại đúng Google account liên kết, xác minh danh tính và nhập `DELETE` để xóa tài khoản cùng dữ liệu liên quan trong database đang hoạt động.
 
-Upload cộng đồng, chỉnh sửa hồ sơ, vote và report vẫn bị tắt. Dữ liệu cộng đồng cũ không được cung cấp qua website trong thời gian duy trì read-only. Xóa tài khoản website không xóa Google Account, lịch sử GitHub công khai, fork hoặc bản sao do bên thứ ba lưu giữ. Đọc [Privacy Policy](website/index.html#privacy) và [Terms](website/index.html#terms) trước khi dùng các tính năng tài khoản.
+Upload cộng đồng, chỉnh sửa hồ sơ, vote và report vẫn bị tắt. Dữ liệu cộng đồng cũ không được cung cấp qua website trong thời gian duy trì read-only. Xóa tài khoản website không xóa Google Account, lịch sử GitHub công khai, fork hoặc bản sao do bên thứ ba lưu giữ. Đọc [Privacy Policy](docs/privacy-policy.md) và [Terms](docs/terms-of-service.md) trước khi dùng các tính năng tài khoản.
 
 ### Đóng góp bằng GitHub Pull Request hoặc Website
 

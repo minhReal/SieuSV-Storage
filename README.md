@@ -49,13 +49,15 @@ Some tools are designed for playtesting only. Check each plugin's folder and REA
 
 ## Library website
 
-The [SieuSV Library website](https://sieu-sv-library-api.sieusv-storage-minhreal.workers.dev/) is currently in **read-only mode** while its community and privacy requirements are reviewed. It serves curated scripts from this repository.
+[Sieu-Sv_Library](https://sieu-sv-library-api.sieusv-storage-minhreal.workers.dev/) is the read-only web catalog for curated Luau scripts in this repository. It helps visitors discover scripts, inspect source files and review repository history.
 
 - **Search and filters:** search GitHub script names, descriptions and keywords, then filter by category.
-- **Source inspection:** open a script page to inspect its Luau source and repository information.
-- **Version history:** GitHub entries show commits that changed the script folder.
+- **Source inspection:** open a script page to inspect its Luau source, manifest and repository information.
+- **Version history:** GitHub entries show commits that changed each script folder.
+- **Google sign-in:** users can create or access a website account through Google OAuth.
+- **Account deletion:** signed-in users can select the same Google account again, verify the linked identity and type `DELETE` to remove the website account and its associated active database records.
 
-Google sign-in, community profiles, uploads, edits, votes and reports are temporarily disabled. Existing community records have not been deleted, but the website does not expose them while the pause is active. Review source code and applicable licenses before using or redistributing it.
+Community uploads, profile edits, votes and report submissions remain disabled. Existing legacy community records are not served while the read-only pause is active. The site does not delete a user's Google Account or public GitHub history. Read the [Privacy Policy](website/index.html#privacy) and [Terms](website/index.html#terms) before using account features. Review source code and applicable licenses before using or redistributing repository content.
 
 ## Pull Request or Website
 
@@ -195,15 +197,17 @@ Repository này là nơi lưu source code, manifest và tài liệu của từng
 
 Một số plugin phụ thuộc vào cấu trúc GUI, quyền truy cập hoặc môi trường playtest cụ thể. Không nên giả định mọi script đều hoạt động khi đặt ở cùng một vị trí.
 
-### Website SieuSV Library
+### Website Sieu-Sv_Library
 
-[SieuSV Library](https://sieu-sv-library-api.sieusv-storage-minhreal.workers.dev/) hiện đang ở **chế độ chỉ đọc** trong thời gian rà soát yêu cầu pháp lý, quyền riêng tư và bảo mật. Website chỉ hiển thị các script đã được tuyển chọn từ repository này.
+[Sieu-Sv_Library](https://sieu-sv-library-api.sieusv-storage-minhreal.workers.dev/) là website catalog chỉ đọc để tìm kiếm và xem source Luau đã được tuyển chọn từ repository này.
 
-- **Tìm kiếm:** tìm tên, mô tả và từ khóa của script GitHub, sau đó lọc theo category.
-- **Xem source:** mở trang script để kiểm tra mã nguồn Luau và thông tin repository.
-- **Lịch sử phiên bản:** script GitHub hiển thị các commit đã thay đổi thư mục tương ứng.
+- **Tìm kiếm và lọc:** tìm script GitHub theo tên, mô tả, từ khóa và category.
+- **Xem source:** mở trang script để kiểm tra mã nguồn, manifest và thông tin repository.
+- **Lịch sử phiên bản:** xem các commit đã thay đổi thư mục script trên GitHub.
+- **Google sign-in:** tạo hoặc truy cập tài khoản website qua Google OAuth.
+- **Delete Account:** người dùng đã đăng nhập chọn lại đúng Google account liên kết, xác minh danh tính và nhập `DELETE` để xóa tài khoản cùng dữ liệu liên quan trong database đang hoạt động.
 
-Đăng nhập Google, hồ sơ cộng đồng, upload, chỉnh sửa, bình chọn và gửi report hiện tạm thời bị tắt. Dữ liệu cộng đồng cũ chưa bị xóa, nhưng website không còn hiển thị chúng khi chế độ tạm dừng đang bật. Hãy kiểm tra source và giấy phép liên quan trước khi sử dụng hoặc phân phối lại.
+Upload cộng đồng, chỉnh sửa hồ sơ, vote và report vẫn bị tắt. Dữ liệu cộng đồng cũ không được cung cấp qua website trong thời gian duy trì read-only. Xóa tài khoản website không xóa Google Account, lịch sử GitHub công khai, fork hoặc bản sao do bên thứ ba lưu giữ. Đọc [Privacy Policy](website/index.html#privacy) và [Terms](website/index.html#terms) trước khi dùng các tính năng tài khoản.
 
 ### Đóng góp bằng GitHub Pull Request hoặc Website
 

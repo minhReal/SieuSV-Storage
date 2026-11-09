@@ -41,9 +41,43 @@ function highlightLuau(source){const esc=s=>s.replace(/&/g,'&amp;').replace(/</g
 async function loadProfile(){
  if(!me){$('profileInfo').innerHTML='<h2>Sign in to view your profile</h2><p class="muted">Your account profile is available after Google sign-in.</p>';$('profileGrid').innerHTML='<div class="empty">Sign in to view your account.</div>';$('profileScriptsTitle').textContent='Your scripts';return}
  const u=me,avatar=u.avatar_url?'<img src="'+esc(u.avatar_url)+'" alt="" class="profileAvatar">':'<div class="profileAvatar profileAvatarFallback">'+esc((u.display_name||u.username||'?').slice(0,1).toUpperCase())+'</div>';
- $('profileInfo').innerHTML='<div class="profileIdentity">'+avatar+'<div><h2>'+esc(u.display_name||u.username)+'</h2><p class="muted">@'+esc(u.username)+'</p></div></div><div class="accountInfo"><h3>Account information</h3><p><b>Join Date</b><span>'+esc(dateLabel(u.created_at))+'</span></p><p><b>Bio</b><span>'+esc(u.bio||'No bio provided.')+'</span></p><p class="muted">Profile viewing is available. Editing and community publishing remain disabled in read-only mode.</p></div>';
+ const deleteMode=new URLSearchParams(location.search).get('delete')==='confirm';
+ const deletePanel=deleteMode
+  ?'<div class="deleteAccountPanel"><h3>Confirm account deletion</h3><p>Google verified the account selected in the previous step. This action permanently deletes your Sieu-Sv_Library account and associated active database records. It does not delete your Google Account or public GitHub content.</p><label for="deleteConfirmWord">Type DELETE to confirm</label><input id="deleteConfirmWord" type="text" maxlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="DELETE"><div class="deleteActions"><button class="btn dangerButton" id="confirmDeleteButton" type="button" disabled>Delete Account</button><button class="btn" id="cancelDeleteButton" type="button">Cancel</button></div><p class="deleteStatus" id="deleteStatus" role="status">This confirmation expires after five minutes.</p></div>'
+  :'<div class="deleteAccountPanel"><h3>Delete Account</h3><p>Start Google account verification, select the same Google account linked to this profile, then type DELETE in the final confirmation. The active account data is removed immediately after you confirm.</p><div class="deleteActions"><button class="btn dangerButton" id="startDeleteButton" type="button">Continue with Google</button></div><p class="deleteStatus" id="deleteStatus" role="status"></p></div>';
+ $('profileInfo').innerHTML='<div class="profileIdentity">'+avatar+'<div><h2>'+esc(u.display_name||u.username)+'</h2><p class="muted">@'+esc(u.username)+'</p></div></div><div class="accountInfo"><h3>Account information</h3><p><b>Join Date</b><span>'+esc(dateLabel(u.created_at))+'</span></p><p><b>Bio</b><span>'+esc(u.bio||'No bio provided.')+'</span></p><p class="muted">Profile viewing is available. Editing and community publishing remain disabled in read-only mode.</p></div>'+deletePanel;
  $('profileScriptsTitle').textContent='Your scripts';
  $('profileGrid').innerHTML='<div class="empty">Community scripts are unavailable while the library is read-only.</div>';
+ const start=$('startDeleteButton');
+ if(start)start.onclick=async()=>{
+  start.disabled=true;$('deleteStatus').textContent='Starting Google verification...';
+  try{
+   const r=await fetch(APP_BASE+'/auth/delete/start',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({})});
+   const d=await r.json();if(!r.ok||!d.url)throw Error(d.message||d.error||'Could not start Google verification.');
+   location.href=d.url;
+  }catch(error){$('deleteStatus').textContent=error.message||'Google verification could not start.';start.disabled=false}
+ };
+ const word=$('deleteConfirmWord'),confirm=$('confirmDeleteButton');
+ if(word&&confirm){
+  word.oninput=()=>{confirm.disabled=word.value!=='DELETE'};
+  confirm.onclick=async()=>{
+   if(word.value!=='DELETE')return;
+   confirm.disabled=true;$('deleteStatus').textContent='Deleting your account...';
+   try{
+    const r=await fetch(APP_BASE+'/auth/delete-account',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({confirmation:'DELETE'})});
+    const d=await r.json();if(!r.ok)throw Error(d.message||d.error||'Account deletion failed.');
+    location.replace(APP_BASE+'/?deleted=1');
+   }catch(error){$('deleteStatus').textContent=error.message||'Account deletion failed. You may need to verify Google again.';confirm.disabled=word.value!=='DELETE'}
+  };
+  $('cancelDeleteButton').onclick=async()=>{
+   const cancel=$('cancelDeleteButton');cancel.disabled=true;
+   try{
+    const r=await fetch(APP_BASE+'/auth/delete/cancel',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({})});
+    if(!r.ok)throw Error('Could not cancel the confirmation.');
+    history.replaceState({page:'profile'},'',PAGE_BASE+'?page=profile');await loadProfile();
+   }catch(error){$('deleteStatus').textContent=error.message||'Could not cancel.';cancel.disabled=false}
+  };
+ }
 }
 async function refreshAuth(){
  try{const r=await fetch(API_BASE+'/api/me',{credentials:'same-origin'});const d=await r.json();me=d.user||null}catch{me=null}
@@ -117,10 +151,18 @@ $('avatarFile').onchange=()=>{const file=$('avatarFile').files&&$('avatarFile').
 $('uploadThumbnailFile').onchange=()=>{const file=$('uploadThumbnailFile').files&&$('uploadThumbnailFile').files[0];if(!file)return;if(!acceptImage(file)){$('uploadStatus').textContent='Use PNG, JPG, WEBP or GIF up to 8 MB.';$('uploadThumbnailFile').value='';return}thumbnailFileObject=file;if(thumbnailObjectUrl)URL.revokeObjectURL(thumbnailObjectUrl);thumbnailObjectUrl=URL.createObjectURL(file);showThumbnail(thumbnailObjectUrl,true)};
 $('uploadSource').oninput=()=>$('sourceCount').textContent=$('uploadSource').value.length.toLocaleString()+' / 100,000 characters';
 $('uploadForm').onsubmit=async e=>{e.preventDefault();if(!me){openLoginConsent();return}const status=$('uploadStatus'),source=uploadMethod==='import'?'':$('uploadSource').value,parts=uploadMethod==='source'?[]:getImportParts();if((uploadMethod==='source'||uploadMethod==='both')&&!source.trim()){status.textContent='Add Luau source before publishing.';return}if((uploadMethod==='import'||uploadMethod==='both')&&(!parts.length||parts.some(x=>!x.trim()))){status.textContent='Fill every String Import Part before publishing.';return}status.textContent='Uploading...';try{const thumbnail=thumbnailFileObject?await cropImageFile(thumbnailFileObject,'thumbnail',250000):'',r=await fetch(API_BASE+'/api/scripts',{method:'POST',headers:{'content-type':'application/json'},credentials:'same-origin',body:JSON.stringify({title:$('uploadTitle').value,description:$('uploadDescription').value,category:$('uploadCategory').value,source,upload_method:uploadMethod,import_parts:parts,thumbnail_url:thumbnail,turnstileToken:document.querySelector('[name="cf-turnstile-response"]')?.value||''})}),d=await r.json();if(!r.ok)throw Error(d.message||d.error||'Upload failed');status.textContent='Uploaded successfully.';thumbnailFileObject=null;if(thumbnailObjectUrl){URL.revokeObjectURL(thumbnailObjectUrl);thumbnailObjectUrl=''}$('uploadForm').reset();showThumbnail('',false);renderImportParts(['']);setUploadMethod('source');$('sourceCount').textContent='0 / 100,000 characters';await load();navigate('home')}catch(err){status.textContent=err.message||'Upload failed.'}};
-const loginQuery=new URLSearchParams(location.search).get('login');
-if(loginQuery)history.replaceState({},'',location.pathname);
-authPromise=refreshAuth();load();const query=new URLSearchParams(location.search),pathPage=location.pathname.split('/')[1],knownPages=['home','explore','privacy','terms','license','about','rules','setup'],initial=query.get('setup')==='1'?'setup':query.get('page')||(query.has('profile')?'profile':location.pathname==='/profile'||location.pathname.startsWith('/profile/')?'profile':knownPages.includes(pathPage)?pathPage:'home');navigate(initial,false);
-if(loginQuery==='consent_required')openLoginConsent();if(new URLSearchParams(location.search).get('setup')==='1')loadRegistration();
+const bootQuery=new URLSearchParams(location.search),loginQuery=bootQuery.get('login'),deletedQuery=bootQuery.get('deleted'),deleteQuery=bootQuery.get('delete');
+const pathPage=location.pathname.split('/')[1],knownPages=['home','explore','privacy','terms','license','about','rules','setup'],initial=bootQuery.get('setup')==='1'?'setup':bootQuery.get('page')||(bootQuery.has('profile')?'profile':location.pathname==='/profile'||location.pathname.startsWith('/profile/')?'profile':knownPages.includes(pathPage)?pathPage:'home');
+if(loginQuery||deletedQuery||(deleteQuery&&deleteQuery!=='confirm'))history.replaceState({},'',PAGE_BASE+(initial==='home'?'':'?page='+encodeURIComponent(initial)));
+authPromise=refreshAuth();load();navigate(initial,false);
+if(loginQuery==='consent_required')openLoginConsent();if(bootQuery.get('setup')==='1')loadRegistration();
+const siteNotice=$('siteNotice');
+if(siteNotice){
+ if(deletedQuery==='1')siteNotice.textContent='Your Sieu-Sv_Library account and associated active database records have been deleted.';
+ else if(deleteQuery==='account_mismatch')siteNotice.textContent='Google verification used a different account. Nothing was deleted; use the Google account linked to this profile.';
+ else if(deleteQuery==='cancelled')siteNotice.textContent='Google verification was cancelled. Nothing was deleted.';
+ else if(deleteQuery==='reauth_failed')siteNotice.textContent='Google verification could not be completed. Nothing was deleted; please try again.';
+}
 $('brandHome').onclick=e=>{e.preventDefault();navigate('home')};document.querySelectorAll('[data-info-page]').forEach(a=>a.onclick=e=>{e.preventDefault();navigate(a.dataset.infoPage)});
 document.querySelectorAll('[data-setting]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-setting]').forEach(x=>x.classList.toggle('active',x===b));document.querySelectorAll('.settingsPane').forEach(x=>x.classList.toggle('active',x.id==='setting-'+b.dataset.setting))});
 function applyTheme(){const t=localStorage.getItem('ssv-theme')||'blue';document.documentElement.style.setProperty('--accent','#3b82f6');$('themeMode').value=t;const m=localStorage.getItem('ssv-motion')||'smooth';$('motionMode').value=m;document.documentElement.style.scrollBehavior=m==='reduced'?'auto':'smooth';document.body.classList.toggle('reducedMotion',m==='reduced')}$('themeMode').onchange=()=>{localStorage.setItem('ssv-theme',$('themeMode').value);applyTheme();$('themeStatus').textContent='Theme saved.'};$('motionMode').onchange=()=>{localStorage.setItem('ssv-motion',$('motionMode').value);applyTheme();$('themeStatus').textContent='Motion saved.'};applyTheme();

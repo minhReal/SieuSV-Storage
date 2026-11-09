@@ -234,7 +234,7 @@ async function handle(request,env){
   const parsed=await readJsonBody(request,370000);
   if(!parsed.ok)return json({error:parsed.error},parsed.status);
   const body=parsed.body,requestedUsername=String(body.username??"").trim().toLowerCase(),requestedDisplay=String(body.display_name??"").trim().replace(/\s+/g," ");
-  const avatar=String(body.avatar_url??pending.avatar_url??"").trim();
+  const avatar=String(body.avatar_url||pending.avatar_url||"").trim();
   if(!/^[a-z0-9_]{3,32}$/.test(requestedUsername))return json({error:"invalid_username",message:"Username must be 3-32 characters and use only lowercase letters, numbers or underscores."},400);
   if(requestedDisplay.length<1||requestedDisplay.length>40)return json({error:"invalid_display_name",message:"Display name must be 1-40 characters."},400);
   if(avatar.length>330000)return json({error:"invalid_avatar",message:"Avatar image is too large."},400);

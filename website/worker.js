@@ -140,6 +140,18 @@ async function handle(request,env){
   if(path==="/profile"||path.startsWith("/profile/")||path==="/upload"||path==="/settings")return new Response(null,{status:302,headers:{Location:origin+"/","Cache-Control":"no-store"}});
   if(path==="/auth/google"||path==="/auth/google/callback"||path==="/api/me/profile"||path==="/api/reports"||path==="/api/scripts"||path.startsWith("/api/scripts/")||path.startsWith("/api/profile/"))return json({error:"community_paused",message:"Community accounts, uploads, profiles, votes and reports are temporarily paused. GitHub-hosted scripts remain available."},503,{"Retry-After":"86400"});
  }
+ const assetFiles={
+  "/assets/index.css":["index.css","text/css; charset=utf-8"],
+  "/assets/index.js":["index.js","application/javascript; charset=utf-8"],
+  "/assets/script.css":["script.css","text/css; charset=utf-8"],
+  "/assets/script.js":["script.js","application/javascript; charset=utf-8"]
+ };
+ if(request.method==="GET"&&assetFiles[url.pathname]){
+  const [file,type]=assetFiles[url.pathname];
+  const asset=await fetch("https://raw.githubusercontent.com/"+REPO+"/main/website/assets/"+file+"?__fresh="+Date.now(),{headers:{"cache-control":"no-cache","user-agent":"Sieu-Sv_Library"}});
+  if(!asset.ok)return new Response("Website asset not found",{status:502,headers:{"cache-control":"no-store"}});
+  return new Response(await asset.text(),{headers:{"content-type":type,"cache-control":"no-store","X-Content-Type-Options":"nosniff"}});
+ }
  if((request.method==="POST"||request.method==="PUT")&&(["/auth/logout","/api/me/profile","/api/scripts","/api/reports"].includes(url.pathname)||(request.method==="POST"&&/^\/api\/scripts\/[^/]+\/vote$/.test(url.pathname))||(request.method==="PUT"&&url.pathname.startsWith("/api/scripts/")))){
   if(request.headers.get("Origin")!==url.origin||request.headers.get("Sec-Fetch-Site")==="cross-site")return json({error:"csrf_rejected"},403);
   if(url.pathname!=="/auth/logout"&&!/^application\/json(?:\s*;|$)/i.test(request.headers.get("content-type")||""))return json({error:"json_required"},415);

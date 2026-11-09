@@ -38,28 +38,15 @@ Script page loads only files listed in the manifest
 
 The Worker caches the manifest index and individual source files. A script's GitHub version history is based on commits that changed its folder.
 
-### Community content flow
+### Legacy community records and account deletion
 
-```text
-Signed-in creator
-  └─ Upload or edit a public script
-       ↓
-Cloudflare Worker validates the request
-       ↓
-D1 stores script metadata and content
-       ↓
-A script_versions snapshot is stored
-       ↓
-Website displays the current version and history
-```
+Community uploads, profile edits, votes and report submissions are currently paused. Existing D1 tables and historical records have not been removed, but the read-only website does not expose the paused community APIs.
 
-Every new community upload receives an initial version snapshot. Every successful owner update creates another snapshot and stores the supplied changelog. Existing scripts without snapshots start their history when they are first edited after this feature is enabled.
+The Google OAuth account flow is still active. A signed-in user can request account deletion from Profile. The Worker asks the user to select the same Google account again, validates the returned Google subject against the active session and requires the exact text `DELETE` before executing the account cleanup batch.
 
-### Reports
+The cleanup removes the user's profile and consent receipt, sessions (by deleting the user row), username history, rate-limit records, submitted reports, likes, votes, community scripts and script-version rows. It also detaches editor attribution from other users' version history. The delete process does not enable any other community write operation.
 
-A signed-in user can submit a report against a public Community script or a manifest-backed GitHub script. The Worker verifies that the target exists, validates the reason and details, applies a per-account rate limit and prevents a repeat open report for the same target within the duplicate-check window.
-
-Reports are stored in D1 for maintainer review. The public API does not expose report records or reporter details.
+The account-deletion API and the current service state are described in [Website API](api.md), [Privacy Policy](privacy-policy.md) and [Terms and Conditions](terms-of-service.md).
 
 ## Security notes
 

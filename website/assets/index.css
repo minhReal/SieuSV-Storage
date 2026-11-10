@@ -38,7 +38,7 @@ body{position:relative;isolation:isolate;background:var(--bg)}body::after{conten
 .registrationActions p{font-size:12px;max-width:360px}
 @media(max-width:520px){.registrationActions{align-items:stretch;flex-direction:column}.registrationActions>div{display:flex;gap:8px}.registrationActions button{flex:1}}
 
-.brand{display:flex;align-items:center;gap:9px}.brandLogo{width:30px;height:30px;object-fit:contain;display:block}
+.brand{display:flex;align-items:center;color:#fff;text-decoration:none}.brand span{color:#fff}
 .deleteAccountPanel{margin-top:20px;padding:16px;border:1px solid #633131;background:#140909;display:grid;gap:10px}
 .deleteAccountPanel h3{margin:0;color:#ffb1b1;font-size:16px}
 .deleteAccountPanel p{margin:0;color:#d5c2c2;font-size:13px;line-height:1.6}
